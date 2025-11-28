@@ -1,6 +1,8 @@
 #ifndef DMELL_VARS_H
 #define DMELL_VARS_H
 
+#include <stddef.h>
+
 typedef struct dmell_var_s
 {
     char* name;                 /**< Name of the variable */
@@ -14,5 +16,6 @@ extern dmell_var_t* dmell_remove_variable( dmell_var_t* head, const char* name )
 extern void dmell_free_variables( dmell_var_t* head );
 extern dmell_var_t* dmell_set_variable( dmell_var_t* head, const char* name, const char* value );
 extern const char* dmell_get_variable_value( dmell_var_t* head, const char* name );
+extern int dmell_expand_variables( dmell_var_t* head, const char* str, char* dst, size_t dst_size );
 
 #endif // DMELL_VARS_H

@@ -1,3 +1,4 @@
+#include "dmell_hlp.h"
 #include "dmell_cmd.h"
 #include <dmod.h>
 #include <string.h>
@@ -16,23 +17,6 @@ size_t g_registered_command_count = 0;
  * @brief Default command handler function pointer.
  */
 dmell_cmd_handler_t g_default_command_handler = NULL;
-
-/**
- * @brief Helper function to skip whitespaces in a command string.
- * 
- * @param str Current position in the command string
- * @param end_ptr Pointer to the end of the command string
- * @return const char* Pointer to the first non-whitespace character
- */
-static const char* skip_whitespaces( const char* str, const char* end_ptr )
-{
-    const char* ptr = str;
-    while(ptr < end_ptr && (*ptr == ' ' || *ptr == '\t') )
-    {
-        ptr++;
-    }
-    return ptr;
-}
 
 /**
  * @brief Helper function to find the next argument in a command string.
@@ -454,7 +438,7 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
     const char* ptr = cmd;
     while( ptr < end_ptr )
     {
-        ptr = skip_whitespaces( ptr, end_ptr );
+        ptr = dmell_skip_whitespaces( ptr, end_ptr );
         const char* arg = ptr;
         const char* next_arg = get_next_arg(arg, end_ptr);
         result = add_arg( out_argv, arg, next_arg, end_ptr );

@@ -1,6 +1,153 @@
 #include <string.h>
+#include <errno.h>
+#include <stdbool.h>
 #include "dmell_vars.h"
+#include "dmell_hlp.h"
 #include "dmod.h"
+
+/**
+ * @brief Helper function to check if a character is valid in a variable name.
+ * 
+ * @param c Character to check
+ * @return true If the character is valid in a variable name
+ * @return false Otherwise
+ */
+static bool is_var_name_char( char c )
+{
+    return ( ( c >= 'A' && c <= 'Z' ) ||
+             ( c >= 'a' && c <= 'z' ) ||
+             ( c >= '0' && c <= '9' ) ||
+             ( c == '_' ) );
+}
+
+/**
+ * @brief Helper function to check if the string at the current position represents a variable.
+ * 
+ * @param str Current position in the string
+ * @param end_ptr Pointer to the end of the string
+ * @return true If it is a variable
+ * @return false Otherwise
+ */
+static bool is_var( const char* str, const char* end_ptr )
+{
+    if( str >= end_ptr || *str != '$' )
+    {
+        return false;
+    }
+
+    str++;
+    if( str >= end_ptr || *str == '$' )
+    {
+        return false;
+    }
+
+    char c = *str;
+    return ( c == '{' || is_var_name_char( c ) );
+}
+
+/**
+ * @brief Helper function to get the end pointer of a variable in the string.
+ * 
+ * @param str Current position in the string
+ * @param end_ptr Pointer to the end of the string
+ * @return const char* Pointer to the position after the variable
+ */
+static const char* get_var_end( const char* str, const char* end_ptr )
+{
+    const char* ptr = str;
+    if( ptr >= end_ptr || *ptr != '$' )
+    {
+        return NULL;
+    }
+
+    ptr++;
+    if( ptr >= end_ptr )
+    {
+        return ptr;
+    }
+
+    if( *ptr == '{' )
+    {
+        ptr++;
+        while( ptr < end_ptr && *ptr != '}' )
+        {
+            ptr++;
+        }
+        if( ptr < end_ptr && *ptr == '}' )
+        {
+            ptr++;
+        }
+        return ptr;
+    }
+    else
+    {
+        while( ptr < end_ptr && is_var_name_char( *ptr ) )
+        {
+            ptr++;
+        }
+        return ptr;
+    }
+}
+
+/**
+ * @brief Helper function to get the variable name from the string.
+ * 
+ * @param str Current position in the string
+ * @param end_ptr Pointer to the end of the string
+ * @param out_name_len Output parameter to hold the length of the variable name
+ * @return const char* Pointer to the start of the variable name
+ */
+static const char* get_var_name( const char* str, const char* end_ptr, size_t *out_name_len )
+{
+    if(!is_var(str, end_ptr))
+    {
+        return NULL;
+    }
+
+    const char* var_end = get_var_end( str, end_ptr );
+    if( var_end == NULL )
+    {
+        return NULL;
+    }
+
+    const char* name_start = str + 1;
+    if( *name_start == '{' )
+    {
+        name_start++;
+    }
+    size_t name_len = var_end - name_start;
+    if( *(var_end - 1) == '}' )
+    {
+        name_len--;
+    }
+
+    if( out_name_len != NULL )
+    {
+        *out_name_len = name_len;
+    }
+    return name_start;
+}
+
+/**
+ * @brief Helper function to find the next variable in the string.
+ * 
+ * @param str Current position in the string
+ * @param end_ptr Pointer to the end of the string
+ * @return const char* Pointer to the position of the next variable, or end_ptr if none found
+ */
+static const char* find_next_var( const char* str, const char* end_ptr )
+{
+    const char* ptr = str;
+    while( ptr < end_ptr )
+    {
+        if( is_var( ptr, end_ptr ) )
+        {
+            return ptr;
+        }
+        ptr++;
+    }
+    return end_ptr;
+}
 
 /**
  * @brief Adds a new variable to the list.
@@ -162,4 +309,57 @@ const char* dmell_get_variable_value( dmell_var_t* head, const char* name )
         return var->value;
     }
     return NULL;
+}
+
+/**
+ * @brief Expands variables in a string and writes the result to the destination buffer.
+ * 
+ * @note If dst is NULL, the function only calculates the required buffer size.
+ * 
+ * @param head Pointer to the head of the variable list
+ * @param str Input string with variables to expand
+ * @param dst [optional] Destination buffer to write the expanded string
+ * @param dst_size [optional] Size of the destination buffer
+ * 
+ * @return number of characters written to dst (excluding null terminator) or -errno on error
+ */
+int dmell_expand_variables( dmell_var_t* head, const char* str, char* dst, size_t dst_size )
+{
+    if(str == NULL)
+    {
+        DMOD_LOG_ERROR("Invalid argument to dmell_expand_variables: %p\n", str);
+        return -EINVAL;
+    }
+
+    size_t required_size = 0;
+
+    char* dst_ptr = dst;
+    char* end_dst = dst != NULL ? dst + dst_size : NULL;
+    const char* end_ptr = str + strlen(str);
+    const char* ptr = str;
+    while( ptr < end_ptr )
+    {
+        ptr = dmell_skip_whitespaces( ptr, end_ptr );
+        const char* var_start = find_next_var( ptr, end_ptr );
+        required_size += dmell_add_to_string( dst_ptr, end_dst, ptr, var_start );
+        dst_ptr = dst != NULL ? dst + required_size : NULL;
+        if(var_start < end_ptr)
+        {
+            size_t name_len = 0;
+            const char* var_name = get_var_name(var_start, end_ptr, &name_len);
+            if(var_name != NULL)
+            {
+                const char* var_value = dmell_get_variable_value(head, var_name);
+                const char* var_value_end = var_value != NULL ? var_value + strlen(var_value) : NULL;
+                required_size += dmell_add_to_string(dst_ptr, end_dst, var_value, var_value_end);
+            }
+            ptr = get_var_end( var_start, end_ptr );
+        }
+        else 
+        {
+            ptr = end_ptr;
+        }
+    }
+
+    return required_size;
 }
