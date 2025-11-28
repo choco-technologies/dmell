@@ -4,6 +4,20 @@
 #include <errno.h>
 
 /**
+ * @brief Global array of registered commands.
+ */
+dmell_cmd_t* g_registered_commands = NULL;
+/**
+ * @brief Count of registered commands.
+ */
+size_t g_registered_command_count = 0;
+
+/**
+ * @brief Default command handler function pointer.
+ */
+dmell_cmd_handler_t g_default_command_handler = NULL;
+
+/**
  * @brief Helper function to skip whitespaces in a command string.
  * 
  * @param str Current position in the command string
@@ -80,6 +94,18 @@ static char* duplicate_arg( const char* arg, size_t len )
 }
 
 /**
+ * @brief Helper function to duplicate a string.
+ * 
+ * @param str String to duplicate
+ * @return char* Duplicated string, or NULL on failure
+ */
+static char* duplicate_string( const char* str )
+{
+    size_t len = strlen( str );
+    return duplicate_arg( str, len );
+}
+
+/**
  * @brief Helper function to add an argument to the dmell_argv_t structure.
  * 
  * @param argv Pointer to the dmell_argv_t structure
@@ -109,6 +135,12 @@ static int add_arg( dmell_argv_t* argv, const char* arg, const char* next_arg, c
 
     argv->argv[argv->argc] = new_arg;
     argv->argc += 1;
+
+    if(argv->program_name == NULL)
+    {
+        argv->program_name = new_arg;
+    }
+
     return 0;
 }
 
@@ -117,7 +149,7 @@ static int add_arg( dmell_argv_t* argv, const char* arg, const char* next_arg, c
  * 
  * @param argv Pointer to the dmell_argv_t structure to free
  */
-static void free_dmell_argv( dmell_argv_t* argv )
+static void free_argv( dmell_argv_t* argv )
 {
     if( argv == NULL )
     {
@@ -133,6 +165,216 @@ static void free_dmell_argv( dmell_argv_t* argv )
     argv->argv = NULL;
 }
 
+/**
+ * @brief Helper function to move a command structure.
+ * 
+ * @param dest Destination command structure
+ * @param src Source command structure
+ */
+static void move_command( dmell_cmd_t* dest, const dmell_cmd_t* src )
+{
+    dest->name = src->name;
+    dest->handler = src->handler;
+}
+
+/**
+ * @brief Helper function to copy a command structure.
+ * 
+ * @param dest Destination command structure
+ * @param src Source command structure
+ * @return int 0 on success, negative value on error
+ */
+static int copy_command( dmell_cmd_t* dest, const dmell_cmd_t* src )
+{
+    dest->name = duplicate_string( src->name );
+    if( dest->name == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in duplicate_string for command name\n");
+        return -ENOMEM;
+    }
+    dest->handler = src->handler;
+    return 0;
+}
+
+/**
+ * @brief Helper function to find the index of a command in the registered commands array.
+ * 
+ * @param command Pointer to the command structure to find
+ * @return int Index of the command, or -1 if not found
+ */
+static int find_command_index( const dmell_cmd_t* command )
+{
+    for( size_t i = 0; i < g_registered_command_count; i++ )
+    {
+        if( strcmp( g_registered_commands[i].name, command->name ) == 0 && g_registered_commands[i].handler == command->handler )
+        {
+            return (int)i;
+        }
+    }
+    return -ENOENT;
+}
+
+/**
+ * @brief Helper function to free a command structure.
+ * 
+ * @param command Pointer to the command structure to free
+ */
+static void free_command( dmell_cmd_t* command )
+{
+    if( command == NULL )
+    {
+        return;
+    }
+
+    Dmod_Free( (void*)command->name );
+    command->name = NULL;
+    command->handler = NULL;
+}
+
+/**
+ * @brief Helper function to shift commands left in the registered commands array.
+ * 
+ * @param start_index Index to start shifting from
+ */
+static void shift_commands_left( size_t start_index )
+{
+    for( size_t i = start_index; i < g_registered_command_count - 1; i++ )
+    {
+        move_command( &g_registered_commands[i], &g_registered_commands[i + 1] );
+    }
+
+    // free the last command slot
+    free_command( &g_registered_commands[g_registered_command_count - 1] );
+}
+
+/**
+ * @brief Helper function to remove a command at a specific index.
+ * 
+ * @param index Index of the command to remove
+ * @return int 0 on success, negative value on error
+ */
+static int remove_command_at_index( size_t index )
+{
+    if( index >= g_registered_command_count )
+    {
+        return -EINVAL;
+    }
+
+    shift_commands_left( index );
+
+    dmell_cmd_t* new_commands = NULL;
+    if( g_registered_command_count - 1 > 0 )
+    {
+        new_commands = Dmod_Realloc( g_registered_commands, sizeof(dmell_cmd_t) * (g_registered_command_count - 1) );
+        if( new_commands == NULL )
+        {
+            DMOD_LOG_ERROR("Memory allocation failed in dmell_unregister_command\n");
+            return -ENOMEM;
+        }
+    }
+    else
+    {
+        Dmod_Free( g_registered_commands );
+    }
+
+    g_registered_commands = new_commands;
+    g_registered_command_count -= 1;
+    return 0;
+}
+
+/**
+ * @brief Sets the default command handler for unrecognized commands.
+ * 
+ * @param handler Function pointer to the default command handler
+ * @return int 0 on success
+ */
+int dmell_set_default_handler(dmell_cmd_handler_t handler)
+{
+    g_default_command_handler = handler;
+    return 0;
+}
+
+/**
+ * @brief Registers a command with the dmell module.
+ * 
+ * @param command Pointer to the command structure to register
+ * @return int 0 on success, negative value on error
+ */
+int dmell_register_command(const dmell_cmd_t* command)
+{
+    if( command == NULL || command->name == NULL || command->handler == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid command structure passed to dmell_register_command: %p\n", command);
+        return -EINVAL;
+    }
+
+    dmell_cmd_t* new_commands = Dmod_Realloc( g_registered_commands, sizeof(dmell_cmd_t) * (g_registered_command_count + 1) );
+    if( new_commands == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in dmell_register_command\n");
+        return -ENOMEM;
+    }
+
+    g_registered_commands = new_commands;
+    dmell_cmd_t* new_command = &g_registered_commands[g_registered_command_count];
+    int result = copy_command( new_command, command );
+    if( result < 0 )
+    {
+        DMOD_LOG_ERROR("Failed to copy command in dmell_register_command\n");
+        return result;
+    }
+    g_registered_command_count += 1;
+    return 0;
+}
+
+/**
+ * @brief Finds a registered command by its name.
+ * 
+ * @param command_name Name of the command to find
+ * @return const dmell_cmd_t* Pointer to the command structure, or NULL if not found
+ */
+const dmell_cmd_t* dmell_find_command(const char* command_name)
+{
+    if( command_name == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid command name passed to dmell_find_command: %p\n", command_name);
+        return NULL;
+    }
+
+    for( size_t i = 0; i < g_registered_command_count; i++ )
+    {
+        if( strcmp( g_registered_commands[i].name, command_name ) == 0 )
+        {
+            return &g_registered_commands[i];
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Unregisters a command from the dmell module.
+ * 
+ * @param command Pointer to the command structure to unregister
+ * @return int 0 on success, negative value on error
+ */
+int dmell_unregister_command(const dmell_cmd_t* command)
+{
+    if( command == NULL || command->name == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid command structure passed to dmell_unregister_command: %p\n", command);
+        return -EINVAL;
+    }
+
+    int index = find_command_index( command );
+    if( index < 0 )
+    {
+        DMOD_LOG_ERROR("Command not found in dmell_unregister_command: %s\n", command->name);
+        return -ENOENT;
+    }
+
+    return remove_command_at_index( (size_t)index );
+}
 
 /**
  * @brief Runs a command by its name.
@@ -144,7 +386,63 @@ static void free_dmell_argv( dmell_argv_t* argv )
  */
 int dmell_run_command(const char* cmd_name, int argc, char** argv)
 {
-    return -1;
+    if( cmd_name == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid command name passed to dmell_run_command: %p\n", cmd_name);
+        return -EINVAL;
+    }
+
+    const dmell_cmd_t* command = dmell_find_command( cmd_name );
+    if( command != NULL )
+    {
+        return command->handler( argc, argv );
+    }
+    else if( g_default_command_handler != NULL )
+    {
+        return g_default_command_handler( argc, argv );
+    }
+    else
+    {
+        DMOD_LOG_ERROR("Command not found and no default handler set in dmell_run_command: %s\n", cmd_name);
+        return -ENOENT;
+    }
+}
+
+/**
+ * @brief Runs a command from a command string.
+ * 
+ * @param cmd Command string to run
+ * @param len Length of the command string
+ * @return int Exit code of the command
+ */
+int dmell_run_command_string(const char* cmd, size_t len)
+{
+    if( cmd == NULL || len == 0 )
+    {
+        DMOD_LOG_ERROR("Invalid arguments to dmell_run_command_string: %p, %zu\n", cmd, len);
+        return -EINVAL;
+    }
+
+    dmell_argv_t parsed_argv = {0};
+    int result = dmell_parse_command( cmd, len, &parsed_argv );
+    if( result < 0 )
+    {
+        DMOD_LOG_ERROR("Failed to parse command string in dmell_run_command_string\n");
+        return result;
+    }
+
+    if( parsed_argv.argc == 0 )
+    {
+        DMOD_LOG_ERROR("No command found in command string\n");
+        free_argv( &parsed_argv );
+        return -EINVAL;
+    }
+
+    const char* command_name = parsed_argv.argv[0];
+    result = dmell_run_command( command_name, parsed_argv.argc - 1, &parsed_argv.argv[1] );
+
+    free_argv( &parsed_argv );
+    return result;
 }
 
 /**
@@ -175,7 +473,7 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
         if( result < 0 )
         {
             DMOD_LOG_ERROR("Failed to add argument in dmell_parse_command\n");
-            free_dmell_argv( out_argv );
+            free_argv( out_argv );
             return result;
         }
         ptr = (next_arg != NULL) ? next_arg : end_ptr;

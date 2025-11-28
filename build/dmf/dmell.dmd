@@ -1,7 +1,0 @@
-# DMOD Dependencies File
-# Generated from module: dmell
-# Source file: /home/pkubiak/Projects/choco-technologies/public/dmell/build/dmf/dmell.dmf
-#
-# This file lists all non-system modules required by the module.
-# Use with dmf-get: dmf-get -d /home/pkubiak/Projects/choco-technologies/public/dmell/build/dmf/dmell.dmd
-
