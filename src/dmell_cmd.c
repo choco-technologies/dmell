@@ -94,18 +94,6 @@ static char* duplicate_arg( const char* arg, size_t len )
 }
 
 /**
- * @brief Helper function to duplicate a string.
- * 
- * @param str String to duplicate
- * @return char* Duplicated string, or NULL on failure
- */
-static char* duplicate_string( const char* str )
-{
-    size_t len = strlen( str );
-    return duplicate_arg( str, len );
-}
-
-/**
  * @brief Helper function to add an argument to the dmell_argv_t structure.
  * 
  * @param argv Pointer to the dmell_argv_t structure
@@ -186,10 +174,10 @@ static void move_command( dmell_cmd_t* dest, const dmell_cmd_t* src )
  */
 static int copy_command( dmell_cmd_t* dest, const dmell_cmd_t* src )
 {
-    dest->name = duplicate_string( src->name );
+    dest->name = Dmod_StrDup( src->name );
     if( dest->name == NULL )
     {
-        DMOD_LOG_ERROR("Memory allocation failed in duplicate_string for command name\n");
+        DMOD_LOG_ERROR("Memory allocation failed in Dmod_StrDup for command name\n");
         return -ENOMEM;
     }
     dest->handler = src->handler;
