@@ -17,34 +17,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Build dmramfs project
+      - name: Build dmell project
         run: |
           mkdir -p build
           cd build
           cmake .. -DDMOD_MODE=DMOD_MODULE
           cmake --build .
-      
-      - name: Build dmod_loader
-        run: |
-          mkdir -p build_dmod
-          cd build_dmod
-          cmake ../build/_deps/dmod-src -DDMOD_MODE=DMOD_SYSTEM
-          cmake --build . --target dmod_loader
-      
-      - name: Clone and build dmvfs
-        run: |
-          cd /tmp
-          git clone https://github.com/choco-technologies/dmvfs.git
-          cd dmvfs
-          mkdir build
-          cd build
-          cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMVFS_BUILD_TESTS=ON
-          cmake --build .
-          echo "dmvfs built successfully, fs_tester available at:"
-          ls -lh ./tests/fs_tester
-      
-      - name: Run filesystem tests
-        run: |
-          echo "Running filesystem tests for dmramfs..."
-          /tmp/dmvfs/build/tests/fs_tester ./build/dmf/dmramfs.dmf
-          echo "Filesystem test completed successfully"
