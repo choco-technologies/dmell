@@ -2,6 +2,7 @@
 #define DMELL_SCRIPT_H
 
 #include "dmell_line.h"
+#include "dmell_vars.h"
 
 /** 
  * @brief Context structure for command line execution.
@@ -9,8 +10,7 @@
 typedef struct 
 {
     int last_exit_code;      /**< Exit code of the last executed command */
-    int argc;                /**< Number of arguments of the current script */
-    char** argv;             /**< Array with arguments of the current script */
+    dmell_var_t* variables;  /**< Pointer to the head of the variable list */
 } dmell_script_ctx_t;
 
 extern int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len );

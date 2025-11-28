@@ -244,6 +244,25 @@ dmell_var_t* dmell_remove_variable( dmell_var_t* head, const char* name )
 }
 
 /**
+ * @brief Adds variables for each argument in the format ARG0, ARG1, ..., ARGN-1.
+ * 
+ * @param head Pointer to the head of the variable list
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return dmell_var_t* Pointer to the head of the updated variable list
+ */
+dmell_var_t* dmell_add_argv_variables( dmell_var_t* head, int argc, char** argv )
+{
+    for(int i = 0; i < argc; i++)
+    {
+        char var_name[32];
+        Dmod_SnPrintf(var_name, sizeof(var_name), "%d", i);
+        head = dmell_add_variable( head, var_name, argv[i] );
+    }
+    return head;
+}
+
+/**
  * @brief Frees the entire variable list.
  * 
  * @param head Pointer to the head of the variable list
@@ -318,12 +337,13 @@ const char* dmell_get_variable_value( dmell_var_t* head, const char* name )
  * 
  * @param head Pointer to the head of the variable list
  * @param str Input string with variables to expand
+ * @param str_len Length of the input string
  * @param dst [optional] Destination buffer to write the expanded string
  * @param dst_size [optional] Size of the destination buffer
  * 
  * @return number of characters written to dst (excluding null terminator) or -errno on error
  */
-int dmell_expand_variables( dmell_var_t* head, const char* str, char* dst, size_t dst_size )
+int dmell_expand_variables( dmell_var_t* head, const char* str, size_t str_len, char* dst, size_t dst_size )
 {
     if(str == NULL)
     {
@@ -335,7 +355,7 @@ int dmell_expand_variables( dmell_var_t* head, const char* str, char* dst, size_
 
     char* dst_ptr = dst;
     char* end_dst = dst != NULL ? dst + dst_size : NULL;
-    const char* end_ptr = str + strlen(str);
+    const char* end_ptr = str + str_len;
     const char* ptr = str;
     while( ptr < end_ptr )
     {
@@ -364,5 +384,5 @@ int dmell_expand_variables( dmell_var_t* head, const char* str, char* dst, size_
         }
     }
 
-    return required_size;
+    return (int)required_size;
 }
