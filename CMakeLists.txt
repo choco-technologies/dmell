@@ -71,6 +71,7 @@ set(DMOD_STACK_SIZE         1024)
 dmod_add_executable(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
     # List of source files - can include C and C++ files
     src/dmell.c
+    src/dmell_cmd.c
 )
 
 target_include_directories(${DMOD_MODULE_NAME} PRIVATE
