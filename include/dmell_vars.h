@@ -3,6 +3,13 @@
 
 #include <stddef.h>
 
+#ifndef DMELL_MAX_VAR_NAME_LEN
+/**
+ * @brief Maximum length for variable names.
+ */
+#   define DMELL_MAX_VAR_NAME_LEN 256
+#endif
+
 typedef struct dmell_var_s
 {
     char* name;                 /**< Name of the variable */

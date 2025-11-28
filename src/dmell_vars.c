@@ -308,7 +308,7 @@ const char* dmell_get_variable_value( dmell_var_t* head, const char* name )
     {
         return var->value;
     }
-    return NULL;
+    return Dmod_GetEnv( name );
 }
 
 /**
@@ -347,9 +347,12 @@ int dmell_expand_variables( dmell_var_t* head, const char* str, char* dst, size_
         {
             size_t name_len = 0;
             const char* var_name = get_var_name(var_start, end_ptr, &name_len);
-            if(var_name != NULL)
+            if(var_name != NULL && name_len > 0 && name_len < DMELL_MAX_VAR_NAME_LEN)
             {
-                const char* var_value = dmell_get_variable_value(head, var_name);
+                char var_name_cpy[ name_len + 1 ];
+                strncpy( var_name_cpy, var_name, name_len );
+                var_name_cpy[ name_len ] = '\0';
+                const char* var_value = dmell_get_variable_value(head, var_name_cpy);
                 const char* var_value_end = var_value != NULL ? var_value + strlen(var_value) : NULL;
                 required_size += dmell_add_to_string(dst_ptr, end_dst, var_value, var_value_end);
             }
