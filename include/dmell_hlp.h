@@ -47,6 +47,7 @@ static inline size_t dmell_add_to_string( char* dst, char* end_dst, const char* 
             dst++;
         }
         len++;
+        value++;
     }
     return len;
 }

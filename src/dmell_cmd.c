@@ -434,7 +434,7 @@ int dmell_run_command_string(const char* cmd, size_t len)
     }
 
     const char* command_name = parsed_argv.argv[0];
-    result = dmell_run_command( command_name, parsed_argv.argc - 1, &parsed_argv.argv[1] );
+    result = dmell_run_command( command_name, parsed_argv.argc, parsed_argv.argv );
 
     free_argv( &parsed_argv );
     return result;
