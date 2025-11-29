@@ -83,3 +83,11 @@ target_include_directories(${DMOD_MODULE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# ======================================================================
+#               Command Modules
+# ======================================================================
+# Add command modules as subdirectories
+add_subdirectory(commands/cp)
+add_subdirectory(commands/mv)
+add_subdirectory(commands/ls)
+add_subdirectory(commands/cat)

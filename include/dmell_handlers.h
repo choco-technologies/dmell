@@ -8,11 +8,7 @@ extern int dmell_handler_set( int argc, char** argv );
 extern int dmell_handler_unset( int argc, char** argv );
 extern int dmell_handler_cd( int argc, char** argv );
 extern int dmell_handler_pwd( int argc, char** argv );
-extern int dmell_handler_ls( int argc, char** argv );
 extern int dmell_handler_exit( int argc, char** argv );
-extern int dmell_handler_cp( int argc, char** argv );
-extern int dmell_handler_mv( int argc, char** argv );
-extern int dmell_handler_cat( int argc, char** argv );
 
 extern int dmell_handler_default( int argc, char** argv );
 
