@@ -466,6 +466,10 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
     while( ptr < end_ptr )
     {
         ptr = dmell_skip_whitespaces( ptr, end_ptr );
+        if( ptr >= end_ptr )
+        {
+            break;
+        }
         const char* arg = ptr;
         const char* next_arg = get_next_arg(arg, end_ptr);
         result = add_arg( out_argv, arg, next_arg, end_ptr );
