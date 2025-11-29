@@ -299,6 +299,133 @@ int dmell_handler_ls( int argc, char** argv )
 }
 
 /**
+ * @brief Helper function to read the shebang line and extract the interpreter.
+ * 
+ * @param file_name Name of the script file
+ * @param buffer Buffer to store the interpreter path
+ * @param buffer_size Size of the buffer
+ * @return bool True if shebang found and interpreter extracted, false otherwise
+ */
+static bool get_shebang_interpreter(const char* file_name, char* buffer, size_t buffer_size)
+{
+    void* file = Dmod_FileOpen(file_name, "r");
+    if(file == NULL)
+    {
+        return false;
+    }
+
+    char mark[3] = {0};
+    size_t read_bytes = Dmod_FileRead(buffer, 1, 2, file);
+    if(read_bytes < 2 || mark[0] != '#' || mark[1] != '!')
+    {
+        Dmod_FileClose(file);
+        return false;
+    }
+
+    read_bytes = Dmod_FileRead(buffer, 1, buffer_size - 1, file);
+    Dmod_FileClose(file);
+    buffer[read_bytes] = '\0';
+    return true;
+}
+
+/**
+ * @brief Helper function to check if a file is a dmell script based on its extension.
+ * 
+ * @param file_name Name of the file
+ * @return bool True if it is a dmell script, false otherwise
+ */
+static bool is_dmell_script(const char* file_name)
+{
+    size_t len = strlen(file_name);
+    return (len > 4 && strcmp(&file_name[len - 4], ".dme") == 0);
+}
+
+/**
+ * @brief Helper function to run a shebang interpreter with the script file.
+ * 
+ * @param interpreter Path to the interpreter
+ * @param script_file Path to the script file
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int run_shebang( char* interpreter, char* script_file, int argc, char** argv )
+{
+    int new_argc = argc + 2;
+    char** new_argv = Dmod_Malloc( sizeof(char*) * (new_argc + 2) );
+    if( new_argv == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in run_shebang for new_argv\n");
+        return -ENOMEM;
+    }
+
+    if(strcmp(interpreter, script_file) == 0)
+    {
+        DMOD_LOG_ERROR("Circular dependency detected: Interpreter and script file cannot be the same: %s\n", interpreter);
+        Dmod_Free( new_argv );
+        return -EINVAL;
+    }
+
+    new_argv[0] = interpreter;
+    new_argv[1] = script_file;
+    for( int i = 1; i < argc; i++ )
+    {
+        new_argv[i + 1] = argv[i];
+    }
+
+    int result = dmell_run_command( interpreter, new_argc, new_argv );
+    Dmod_Free( new_argv );
+    return result;
+}
+
+/**
+ * @brief Default handler for unknown commands.
+ * 
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_default( int argc, char** argv )
+{
+    if( argc < 1 )
+    {
+        DMOD_LOG_ERROR("No command provided to default handler\n");
+        return -EINVAL;
+    }
+
+    // check if it is setting an environment variable
+    if(strchr(argv[0], '=') != NULL)
+    {
+        return dmell_handler_set( argc, argv );
+    }
+    else
+    {
+        // check if it is a file execution
+        char* file_name = argv[0];
+        if(Dmod_FileAvailable(file_name))
+        {
+            char interpreter[256] = {0};
+            if(get_shebang_interpreter(file_name, interpreter, sizeof(interpreter)))
+            {
+                return run_shebang(interpreter, file_name, argc, argv);
+            }
+            else if(is_dmell_script(file_name))
+            {
+                return dmell_run_script_file(file_name, argc, argv);
+            }
+            else
+            {
+                return Dmod_RunModule( file_name, argc, argv );
+            }
+        }
+        else 
+        {
+            return Dmod_RunModule( file_name, argc, argv );
+        }
+    }
+}
+
+/**
  * @brief Registers built-in command handlers.
  * 
  * @return int Exit code
@@ -313,5 +440,7 @@ int dmell_register_handlers( void )
     dmell_register_command_handler( "pwd", dmell_handler_pwd );
     dmell_register_command_handler( "ls", dmell_handler_ls );
     dmell_register_command_handler( "exit", dmell_handler_exit );
+
+    dmell_set_default_handler( dmell_handler_default );
     return 0;
 }

@@ -11,6 +11,8 @@ extern int dmell_handler_pwd( int argc, char** argv );
 extern int dmell_handler_ls( int argc, char** argv );
 extern int dmell_handler_exit( int argc, char** argv );
 
+extern int dmell_handler_default( int argc, char** argv );
+
 extern int dmell_register_handlers( void );
 
 #endif // DMELL_HANDLERS_H
