@@ -32,10 +32,10 @@ Complex file system commands are implemented as separate DMOD modules for better
 These modules can be installed separately using the `dmf-get` package manager tool:
 
 ```bash
-dmf-get install cp
-dmf-get install mv
-dmf-get install ls
-dmf-get install cat
+dmf-get cp
+dmf-get mv
+dmf-get ls
+dmf-get cat
 ```
 
 | Module | Description | Documentation |
