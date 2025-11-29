@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <dirent.h>
 #include <dmod.h>
 #include "dmell_handlers.h"
 #include "dmell.h"
