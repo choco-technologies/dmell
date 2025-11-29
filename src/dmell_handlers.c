@@ -332,6 +332,103 @@ int dmell_handler_cp( int argc, char** argv )
 }
 
 /**
+ * @brief Handler for the 'mv' command.
+ * 
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_mv( int argc, char** argv )
+{
+    if( argc < 3 )
+    {
+        DMOD_LOG_ERROR("Usage: mv <source> <destination>\n");
+        return -EINVAL;
+    }
+
+    const char* source = argv[1];
+    const char* destination = argv[2];
+    bool dest_is_dir = is_dir(destination);
+    bool alloced_dest_path = false;
+    if( source == NULL || destination == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid source or destination in mv command\n");
+        return -EINVAL;
+    }
+
+    if(dest_is_dir)
+    {
+        const char* filename = get_filename_from_path(source);
+        size_t dest_path_len = strlen(destination) + 1 + strlen(filename) + 1;
+        char* dest_path = Dmod_Malloc(dest_path_len);
+        if(dest_path == NULL)
+        {
+            DMOD_LOG_ERROR("Memory allocation failed in mv command\n");
+            return -ENOMEM;
+        }
+        Dmod_SnPrintf(dest_path, dest_path_len, "%s/%s", destination, filename);
+        destination = dest_path;
+        alloced_dest_path = true;
+    }
+
+    // int result = Dmod_Rename(source, destination);
+    int result = -1; // rename not implemented in Dmod yet
+    if( result != 0 )
+    {
+        DMOD_LOG_ERROR("Failed to move file from '%s' to '%s': %d\n", source, destination, result);
+        if(alloced_dest_path)
+        {
+            Dmod_Free((void*)destination);
+        }
+        return result;
+    }
+
+    if(alloced_dest_path)
+    {
+        Dmod_Free((void*)destination);
+    }
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'cat' command.
+ * 
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_cat( int argc, char** argv )
+{
+    if( argc < 2 )
+    {
+        DMOD_LOG_ERROR("Usage: cat <file1> [file2 ...]\n");
+        return -EINVAL;
+    }
+
+    for( int i = 1; i < argc; i++ )
+    {
+        const char* file_name = argv[i];
+        void* file = Dmod_FileOpen(file_name, "rb");
+        if( file == NULL )
+        {
+            DMOD_LOG_ERROR("Failed to open file '%s'\n", file_name);
+            continue;
+        }
+
+        char buffer[4096];
+        size_t bytes_read;
+        while( (bytes_read = Dmod_FileRead(buffer, 1, sizeof(buffer), file)) > 0 )
+        {
+            Dmod_Printf(buffer);
+        }
+
+        Dmod_FileClose(file);
+    }
+
+    return 0;
+}
+
+/**
  * @brief Handler for the 'ls' command.
  * 
  * @param argc Number of arguments
@@ -551,6 +648,8 @@ int dmell_register_handlers( void )
     dmell_register_command_handler( "pwd", dmell_handler_pwd );
     dmell_register_command_handler( "ls", dmell_handler_ls );
     dmell_register_command_handler( "cp", dmell_handler_cp );
+    dmell_register_command_handler( "mv", dmell_handler_mv );
+    dmell_register_command_handler( "cat", dmell_handler_cat );
     dmell_register_command_handler( "exit", dmell_handler_exit );
 
     dmell_set_default_handler( dmell_handler_default );
