@@ -1,0 +1,7 @@
+#!/bin/dmell
+
+echo "Hello scripts world!"
+set dupa=lool
+
+# Printing of variable value
+echo "dupa = $dupa"

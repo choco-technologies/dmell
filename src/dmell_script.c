@@ -39,7 +39,11 @@ static const char* find_comment_start( const char* str, const char* end_ptr )
  */
 int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len )
 {
-    if( ctx == NULL || line == NULL || len == 0 )
+    if(len == 0)
+    {
+        return 0;
+    }
+    if( ctx == NULL || line == NULL )
     {
         DMOD_LOG_ERROR("Invalid arguments to dmell_run_script_line: %p, %p, %zu\n", ctx, line, len);
         return -EINVAL;
