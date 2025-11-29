@@ -311,12 +311,7 @@ dmell_var_t* dmell_set_variable( dmell_var_t* head, const char* name, const char
         DMOD_LOG_ERROR("Invalid arguments to dmell_set_variable: %p, %p\n", name, value);
         return head;
     }
-    int result = Dmod_SetEnv( name, value, 1 );
-    if( result != 0 )
-    {
-        DMOD_LOG_ERROR("Failed to set environment variable in dmell_set_variable: %s=%s\n", name, value);
-    }
-
+    
     dmell_var_t* var = dmell_find_variable( head, name );
     if( var != NULL )
     {

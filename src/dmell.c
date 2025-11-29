@@ -24,32 +24,34 @@ static void print_help()
  */
 int main(int argc, char** argv)
 {
+    int result = -1;
+    Dmod_EnvCtx_Push();
     if( argc <= 1 )
     {
         dmell_register_handlers();
-        return dmell_interactive_mode();
+        result = dmell_interactive_mode();
     }
     else if(argc == 2 && ( strcmp( argv[1], "-h" ) == 0 || strcmp( argv[1], "--help" ) == 0 ) )
     {
         print_help();
-        return 0;
+        result = 0;
     }
     else if(argc == 2 && ( strcmp( argv[1], "-v" ) == 0 || strcmp( argv[1], "--version" ) == 0 ) )
     {
         Dmod_Printf("dmell version %s\n", DMOD_MODULE_VERSION);
-        return 0;
+        result = 0;
     }
     else if(argc == 2)
     {
         const char* script_file = argv[1];
         dmell_register_handlers();
         g_dmell_global_script_ctx.variables = dmell_add_argv_variables( g_dmell_global_script_ctx.variables, argc - 1, &argv[1] );
-        return dmell_run_script_file( script_file, argc - 1, &argv[1] );
+        result = dmell_run_script_file( script_file, argc - 1, &argv[1] );
     }
     else if(argc == 3 && strcmp( argv[1], "-c" ) == 0 )
     {
         dmell_register_handlers();
-        return dmell_run_script_line(&g_dmell_global_script_ctx, argv[2], strlen( argv[2] ) );
+        result = dmell_run_script_line(&g_dmell_global_script_ctx, argv[2], strlen( argv[2] ) );
     }
     else
     {
@@ -61,6 +63,8 @@ int main(int argc, char** argv)
             Dmod_Printf("argv[%d]: %s\n", i, argv[i]);
         }
 
-        return -1;
+        result = -1;
     }
+    Dmod_EnvCtx_Pop();
+    return result;
 }

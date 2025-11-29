@@ -80,7 +80,19 @@ int dmell_handler_set( int argc, char** argv )
     strncpy(var_name, eval, name_len);
     var_name[name_len] = '\0';
     const char* var_value = ptr;
-    g_dmell_global_script_ctx.variables = dmell_set_variable( g_dmell_global_script_ctx.variables, var_name, var_value );
+    if(strcmp(command, "export") == 0)
+    {
+        int result = Dmod_SetEnv( var_name, var_value, 1 );
+        if( result != 0 )
+        {
+            DMOD_LOG_ERROR("Failed to set environment variable in dmell_handler_export: %s=%s\n", var_name, var_value);
+            return result;
+        }
+    }
+    else 
+    {
+        g_dmell_global_script_ctx.variables = dmell_set_variable( g_dmell_global_script_ctx.variables, var_name, var_value );
+    }
     return 0;
 }
 
