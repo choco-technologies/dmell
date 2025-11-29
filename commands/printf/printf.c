@@ -74,7 +74,7 @@ int main( int argc, char** argv )
                 case 'i':
                     if( arg_index < argc )
                     {
-                        // Simple string to int conversion
+                        // String to int conversion with overflow protection
                         const char* arg = argv[arg_index++];
                         int val = 0;
                         int sign = 1;
@@ -83,8 +83,18 @@ int main( int argc, char** argv )
                             sign = -1;
                             arg++;
                         }
+                        else if( *arg == '+' )
+                        {
+                            arg++;
+                        }
                         while( *arg >= '0' && *arg <= '9' )
                         {
+                            // Overflow check
+                            if( val > (2147483647 - (*arg - '0')) / 10 )
+                            {
+                                val = 2147483647;
+                                break;
+                            }
                             val = val * 10 + (*arg - '0');
                             arg++;
                         }
@@ -94,11 +104,17 @@ int main( int argc, char** argv )
                 case 'x':
                     if( arg_index < argc )
                     {
-                        // Simple string to int conversion for hex output
+                        // Parse decimal input and output as hex
                         const char* arg = argv[arg_index++];
-                        int val = 0;
+                        unsigned int val = 0;
                         while( *arg >= '0' && *arg <= '9' )
                         {
+                            // Overflow check
+                            if( val > (0xFFFFFFFF - (*arg - '0')) / 10 )
+                            {
+                                val = 0xFFFFFFFF;
+                                break;
+                            }
                             val = val * 10 + (*arg - '0');
                             arg++;
                         }
@@ -108,11 +124,17 @@ int main( int argc, char** argv )
                 case 'X':
                     if( arg_index < argc )
                     {
-                        // Simple string to int conversion for hex output
+                        // Parse decimal input and output as hex uppercase
                         const char* arg = argv[arg_index++];
-                        int val = 0;
+                        unsigned int val = 0;
                         while( *arg >= '0' && *arg <= '9' )
                         {
+                            // Overflow check
+                            if( val > (0xFFFFFFFF - (*arg - '0')) / 10 )
+                            {
+                                val = 0xFFFFFFFF;
+                                break;
+                            }
                             val = val * 10 + (*arg - '0');
                             arg++;
                         }

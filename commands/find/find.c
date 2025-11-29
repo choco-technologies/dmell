@@ -89,7 +89,9 @@ static void search_directory(const char* base_path, const char* name_pattern, in
         char* full_path = Dmod_Malloc(full_len);
         if( full_path == NULL )
         {
-            continue;
+            // Memory allocation failed - close directory and return
+            Dmod_CloseDir(dir);
+            return;
         }
         
         if( base_path[base_len - 1] == '/' )
