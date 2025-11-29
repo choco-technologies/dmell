@@ -27,6 +27,7 @@ typedef struct
 
 extern int                  dmell_set_default_handler   (dmell_cmd_handler_t handler);
 extern int                  dmell_register_command      (const dmell_cmd_t* command);
+extern int                  dmell_register_command_handler(const char* command_name, dmell_cmd_handler_t handler);
 extern const dmell_cmd_t*   dmell_find_command          (const char* command_name);
 extern int                  dmell_unregister_command    (const dmell_cmd_t* command);
 extern int                  dmell_run_command           (const char* cmd_name, int argc, char** argv);

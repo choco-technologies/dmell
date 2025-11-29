@@ -8,5 +8,6 @@
 #include "dmell_ia.h"
 #include "dmell_script.h"
 #include "dmell_vars.h"
+#include "dmell_hlp.h"
 
 #endif // DMELL_H

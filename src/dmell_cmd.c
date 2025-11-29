@@ -300,6 +300,29 @@ int dmell_register_command(const dmell_cmd_t* command)
 }
 
 /**
+ * @brief Registers a command handler by command name.
+ * 
+ * @param command_name Name of the command to register
+ * @param handler Function pointer to the command handler
+ * @return int 0 on success, negative value on error
+ */
+int dmell_register_command_handler(const char* command_name, dmell_cmd_handler_t handler)
+{
+    if( command_name == NULL || handler == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid arguments to dmell_register_command_handler: %p, %p\n", command_name, handler);
+        return -EINVAL;
+    }
+
+    dmell_cmd_t command = {
+        .name = command_name,
+        .handler = handler
+    };
+
+    return dmell_register_command( &command );
+}
+
+/**
  * @brief Finds a registered command by its name.
  * 
  * @param command_name Name of the command to find

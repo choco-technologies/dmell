@@ -3,6 +3,11 @@
 #include "dmell_script.h"
 #include "dmod.h"
 
+dmell_script_ctx_t g_dmell_global_script_ctx = {
+    .last_exit_code = 0,
+    .variables      = NULL
+};
+
 /**
  * @brief Helper function to find the start of a comment in the script line.
  * 
@@ -66,7 +71,6 @@ int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len
         Dmod_Free( expanded_line );
         return -EINVAL;
     }
-
     int exit_code = dmell_run_line( expanded_line, effective_len );
     Dmod_Free( expanded_line );
     

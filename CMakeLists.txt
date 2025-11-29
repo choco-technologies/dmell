@@ -76,6 +76,7 @@ dmod_add_executable(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
     src/dmell_script.c
     src/dmell_vars.c
     src/dmell_ia.c
+    src/dmell_handlers.c
 )
 
 target_include_directories(${DMOD_MODULE_NAME} PRIVATE

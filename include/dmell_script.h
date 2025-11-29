@@ -18,6 +18,8 @@ typedef struct
     dmell_var_t* variables;  /**< Pointer to the head of the variable list */
 } dmell_script_ctx_t;
 
+extern dmell_script_ctx_t g_dmell_global_script_ctx;
+
 extern int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len );
 extern int dmell_run_script_file(const char* file_path, int argc, char** argv);
 

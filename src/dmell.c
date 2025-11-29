@@ -1,5 +1,6 @@
 #include "dmell.h"
 #include <string.h>
+#include "dmell_handlers.h"
 
 /**
  * @brief Helper function to print help information.
@@ -25,6 +26,7 @@ int main(int argc, char** argv)
 {
     if( argc <= 1 )
     {
+        dmell_register_handlers();
         return dmell_interactive_mode();
     }
     else if(argc == 2 && ( strcmp( argv[1], "-h" ) == 0 || strcmp( argv[1], "--help" ) == 0 ) )
@@ -39,7 +41,8 @@ int main(int argc, char** argv)
     }
     else if(argc == 3 && strcmp( argv[1], "-c" ) == 0 )
     {
-        return dmell_run_line( argv[2], strlen( argv[2] ) );
+        dmell_register_handlers();
+        return dmell_run_script_line(&g_dmell_global_script_ctx, argv[2], strlen( argv[2] ) );
     }
     else
     {
