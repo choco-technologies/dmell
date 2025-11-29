@@ -1,0 +1,39 @@
+#!/bin/dmell
+
+# Example DMELL Script
+# This file demonstrates the syntax of .dme scripts
+
+# Print a message to standard output
+echo "Hello, dmell!"
+
+# Set a variable using the 'set' command
+set myvar=hello_world
+
+# Alternative variable assignment syntax
+anothervar=test_value
+
+# Export a variable to the environment
+export PATH=/usr/bin:/usr/local/bin
+
+# Reference variables in echo
+echo "myvar = $myvar"
+echo "anothervar = $anothervar"
+
+# Use bracket syntax for variables
+echo "Bracket syntax: ${myvar}_suffix"
+
+# Access the exit code of the last command
+echo "Last exit code: $?"
+
+# Strings with single quotes (no variable expansion)
+echo 'This $myvar is not expanded'
+
+# Change directory
+cd /tmp
+pwd
+
+# Unset a variable
+unset myvar
+
+# Exit with success
+exit 0
