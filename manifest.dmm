@@ -7,3 +7,11 @@ $include https://github.com/choco-technologies/dmell/releases/download/vlatest/v
 
 # Module entries with version placeholder - will be expanded by $version-available
 dmell https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+
+# ===============    Command modules    ===============
+# Command modules are included in the same release package as dmell
+# They can be installed separately using dmf-get
+cp https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+mv https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+ls https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+cat https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
