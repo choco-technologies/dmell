@@ -27,7 +27,16 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 
 ## Command Modules
 
-Complex file system commands are implemented as separate DMOD modules for better modularity:
+Complex file system commands are implemented as separate DMOD modules for better modularity.
+
+These modules can be installed separately using the `dmf-get` package manager tool:
+
+```bash
+dmf-get install cp
+dmf-get install mv
+dmf-get install ls
+dmf-get install cat
+```
 
 | Module | Description | Documentation |
 |--------|-------------|---------------|
@@ -49,22 +58,26 @@ Complex file system commands are implemented as separate DMOD modules for better
 ```bash
 mkdir -p build
 cd build
-cmake .. -DDMOD_MODE=DMOD_MODULE
+cmake ..
 cmake --build .
 ```
 
 ## Usage
 
-### Running the Shell
+### Running the Shell on PC
+
+On PC, dmell modules are executed using the `dmod_loader` tool from the DMOD repository:
 
 ```bash
-dmell
+dmod_loader dmell.dmf
 ```
+
+For more details about the loader, see the [dmod repository](https://github.com/choco-technologies/dmod).
 
 ### Running a Script
 
 ```bash
-dmell script.dme
+dmod_loader dmell.dmf script.dme
 ```
 
 ### Script Example

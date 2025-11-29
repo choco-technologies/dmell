@@ -100,8 +100,9 @@ jobs:
             cp $DMF_DIR/dmell.dmd release_package/
           fi
           
-          # Copy command modules
-          for cmd in cp mv ls cat; do
+          # Copy command modules - dynamically discover from commands directory
+          for cmd_dir in commands/*/; do
+            cmd=$(basename "$cmd_dir")
             if [ -f $DMF_DIR/${cmd}.dmf ]; then
               cp $DMF_DIR/${cmd}.dmf release_package/
             fi
@@ -173,12 +174,14 @@ jobs:
           
           echo "Found versions: $VERSIONS"
           
-          # Add $version-available directives for all modules
+          # Add $version-available directive for main module
           echo "\$version-available dmell $VERSIONS" >> versions.dmm
-          echo "\$version-available cp $VERSIONS" >> versions.dmm
-          echo "\$version-available mv $VERSIONS" >> versions.dmm
-          echo "\$version-available ls $VERSIONS" >> versions.dmm
-          echo "\$version-available cat $VERSIONS" >> versions.dmm
+          
+          # Add $version-available directives for command modules - dynamically discover
+          for cmd_dir in commands/*/; do
+            cmd=$(basename "$cmd_dir")
+            echo "\$version-available $cmd $VERSIONS" >> versions.dmm
+          done
           
           echo "Generated versions.dmm:"
           cat versions.dmm

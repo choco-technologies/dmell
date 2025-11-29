@@ -12,7 +12,7 @@
  * @param argv Array of argument strings
  * @return int Exit code (0 on success, negative on error)
  */
-int Dmod_Main( int argc, char** argv )
+int main( int argc, char** argv )
 {
     const char* path = ".";
     int show_hidden = 0;

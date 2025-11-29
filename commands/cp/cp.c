@@ -45,7 +45,7 @@ static const char* get_filename_from_path(const char* path)
  * @param argv Array of argument strings
  * @return int Exit code (0 on success, negative on error)
  */
-int Dmod_Main( int argc, char** argv )
+int main( int argc, char** argv )
 {
     if( argc < 3 )
     {
