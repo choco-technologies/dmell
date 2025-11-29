@@ -8,7 +8,7 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 ## Features
 
 - **Built-in Commands**: Basic shell commands like `echo`, `cd`, `pwd`, `set`, `unset`, `export`, and `exit`
-- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`) available as separate DMOD modules
+- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`, `rm`, `rmdir`, `find`, `which`, `printf`) available as separate DMOD modules
 - **Script Execution**: Support for `.dme` script files
 - **Variable Management**: Environment variables and shell variables support
 - **Shebang Support**: Execute scripts with custom interpreters
@@ -41,6 +41,11 @@ dmf-get touch
 dmf-get head
 dmf-get tail
 dmf-get grep
+dmf-get rm
+dmf-get rmdir
+dmf-get find
+dmf-get which
+dmf-get printf
 ```
 
 | Module | Description | Documentation |
@@ -54,6 +59,11 @@ dmf-get grep
 | `head` | Display first lines of file | [commands/head/README.md](commands/head/README.md) |
 | `tail` | Display last lines of file | [commands/tail/README.md](commands/tail/README.md) |
 | `grep` | Search text in files | [commands/grep/README.md](commands/grep/README.md) |
+| `rm`   | Remove files | [commands/rm/README.md](commands/rm/README.md) |
+| `rmdir`| Remove empty directories | [commands/rmdir/README.md](commands/rmdir/README.md) |
+| `find` | Search for files | [commands/find/README.md](commands/find/README.md) |
+| `which`| Locate module path | [commands/which/README.md](commands/which/README.md) |
+| `printf`| Format and print text | [commands/printf/README.md](commands/printf/README.md) |
 
 ## Building
 
@@ -115,7 +125,12 @@ dmell/
 │   ├── touch/           # Create empty file module
 │   ├── head/            # Display first lines module
 │   ├── tail/            # Display last lines module
-│   └── grep/            # Search text module
+│   ├── grep/            # Search text module
+│   ├── rm/              # Remove files module
+│   ├── rmdir/           # Remove directories module
+│   ├── find/            # Search for files module
+│   ├── which/           # Locate module module
+│   └── printf/          # Format and print module
 ├── examples/            # Example scripts
 └── CMakeLists.txt       # Build configuration
 ```

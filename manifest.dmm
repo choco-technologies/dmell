@@ -20,3 +20,8 @@ touch https://github.com/choco-technologies/dmell/releases/download/v<version>/d
 head https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 tail https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 grep https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+rm https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+rmdir https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+find https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+which https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+printf https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
