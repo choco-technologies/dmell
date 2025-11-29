@@ -8,7 +8,7 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 ## Features
 
 - **Built-in Commands**: Basic shell commands like `echo`, `cd`, `pwd`, `set`, `unset`, `export`, and `exit`
-- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`) available as separate DMOD modules
+- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`) available as separate DMOD modules
 - **Script Execution**: Support for `.dme` script files
 - **Variable Management**: Environment variables and shell variables support
 - **Shebang Support**: Execute scripts with custom interpreters
@@ -36,6 +36,11 @@ dmf-get cp
 dmf-get mv
 dmf-get ls
 dmf-get cat
+dmf-get mkdir
+dmf-get touch
+dmf-get head
+dmf-get tail
+dmf-get grep
 ```
 
 | Module | Description | Documentation |
@@ -44,6 +49,11 @@ dmf-get cat
 | `mv`   | Move/rename files | [commands/mv/README.md](commands/mv/README.md) |
 | `ls`   | List directory contents | [commands/ls/README.md](commands/ls/README.md) |
 | `cat`  | Display file contents | [commands/cat/README.md](commands/cat/README.md) |
+| `mkdir`| Create directories | [commands/mkdir/README.md](commands/mkdir/README.md) |
+| `touch`| Create empty files / update mtime | [commands/touch/README.md](commands/touch/README.md) |
+| `head` | Display first lines of file | [commands/head/README.md](commands/head/README.md) |
+| `tail` | Display last lines of file | [commands/tail/README.md](commands/tail/README.md) |
+| `grep` | Search text in files | [commands/grep/README.md](commands/grep/README.md) |
 
 ## Building
 
@@ -100,7 +110,12 @@ dmell/
 │   ├── cp/              # Copy command module
 │   ├── mv/              # Move command module
 │   ├── ls/              # List command module
-│   └── cat/             # Cat command module
+│   ├── cat/             # Cat command module
+│   ├── mkdir/           # Create directory module
+│   ├── touch/           # Create empty file module
+│   ├── head/            # Display first lines module
+│   ├── tail/            # Display last lines module
+│   └── grep/            # Search text module
 ├── examples/            # Example scripts
 └── CMakeLists.txt       # Build configuration
 ```
