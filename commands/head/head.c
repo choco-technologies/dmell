@@ -116,12 +116,8 @@ int main( int argc, char** argv )
         
         Dmod_Printf("%s", buffer);
         
-        // Check if line ends with newline
-        size_t len = strlen(buffer);
-        if( len > 0 && buffer[len - 1] == '\n' )
-        {
-            lines_printed++;
-        }
+        // Count each successful read as a line
+        lines_printed++;
     }
 
     Dmod_FileClose(file);

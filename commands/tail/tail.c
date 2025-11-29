@@ -106,18 +106,28 @@ int main( int argc, char** argv )
     // First, count total lines in file
     char buffer[4096];
     int total_lines = 0;
+    int last_line_had_newline = 1;
     
     while( Dmod_FileReadLine(buffer, sizeof(buffer), file) != NULL )
     {
         size_t len = strlen(buffer);
-        if( len > 0 && buffer[len - 1] == '\n' )
+        if( len > 0 )
         {
-            total_lines++;
+            if( buffer[len - 1] == '\n' )
+            {
+                total_lines++;
+                last_line_had_newline = 1;
+            }
+            else
+            {
+                // Line without newline (possibly last line)
+                last_line_had_newline = 0;
+            }
         }
     }
     
-    // Handle case where last line doesn't end with newline
-    if( strlen(buffer) > 0 && buffer[strlen(buffer) - 1] != '\n' )
+    // Count last line if it didn't end with newline
+    if( !last_line_had_newline )
     {
         total_lines++;
     }
@@ -140,11 +150,8 @@ int main( int argc, char** argv )
         {
             break;
         }
-        size_t len = strlen(buffer);
-        if( len > 0 && buffer[len - 1] == '\n' )
-        {
-            current_line++;
-        }
+        // Each successful read is a line (whether it ends with newline or not)
+        current_line++;
     }
 
     // Print remaining lines

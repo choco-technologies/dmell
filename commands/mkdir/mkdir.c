@@ -76,7 +76,9 @@ int main( int argc, char** argv )
                     char saved = *p;
                     *p = '\0';
                     
-                    // Try to create directory (ignore errors for existing directories)
+                    // Try to create directory
+                    // With -p flag, errors are expected for existing directories
+                    // and are silently ignored (matching POSIX mkdir -p behavior)
                     Dmod_MakeDir(path_copy, 0755);
                     
                     *p = saved;
