@@ -1,0 +1,141 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "DMELL Script",
+  "scopeName": "source.dme",
+  "patterns": [
+    {
+      "include": "#shebang"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#commands"
+    }
+  ],
+  "repository": {
+    "shebang": {
+      "patterns": [
+        {
+          "name": "comment.line.shebang.dme",
+          "match": "^#!.*$"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.dme",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.dme",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "include": "#variables"
+            },
+            {
+              "include": "#escape-sequences"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.dme",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "include": "#escape-sequences"
+            }
+          ]
+        }
+      ]
+    },
+    "escape-sequences": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.dme",
+          "match": "\\\\[\\\\\"'nrt]"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.bracket.dme",
+          "match": "\\$\\{[a-zA-Z_][a-zA-Z0-9_]*\\}",
+          "captures": {
+            "0": {
+              "name": "variable.other.bracket.dme"
+            }
+          }
+        },
+        {
+          "name": "variable.other.simple.dme",
+          "match": "\\$[a-zA-Z_?][a-zA-Z0-9_]*",
+          "captures": {
+            "0": {
+              "name": "variable.other.simple.dme"
+            }
+          }
+        },
+        {
+          "name": "variable.other.special.dme",
+          "match": "\\$[0-9]+",
+          "captures": {
+            "0": {
+              "name": "variable.other.special.dme"
+            }
+          }
+        }
+      ]
+    },
+    "commands": {
+      "patterns": [
+        {
+          "name": "meta.command.builtin.dme",
+          "match": "^\\s*(echo|set|unset|export|cd|pwd|exit)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.builtin.dme"
+            }
+          }
+        },
+        {
+          "name": "meta.assignment.dme",
+          "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(=)\\s*(.*)$",
+          "captures": {
+            "1": {
+              "name": "variable.other.assignment.dme"
+            },
+            "2": {
+              "name": "keyword.operator.assignment.dme"
+            },
+            "3": {
+              "patterns": [
+                {
+                  "include": "#strings"
+                },
+                {
+                  "include": "#variables"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
