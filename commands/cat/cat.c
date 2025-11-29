@@ -24,7 +24,7 @@ int Dmod_Main( int argc, char** argv )
     for( int i = 1; i < argc; i++ )
     {
         const char* file_name = argv[i];
-        void* file = Dmod_FileOpen(file_name, "rb");
+        void* file = Dmod_FileOpen(file_name, "r");
         if( file == NULL )
         {
             DMOD_LOG_ERROR("Failed to open file '%s'\n", file_name);

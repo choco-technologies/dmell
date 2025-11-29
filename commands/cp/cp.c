@@ -57,6 +57,10 @@ int Dmod_Main( int argc, char** argv )
     const char* destination = argv[2];
     bool dest_is_dir = is_dir(destination);
     bool alloced_dest_path = false;
+    void* src_file = NULL;
+    void* dest_file = NULL;
+    int result = 0;
+
     if( source == NULL || destination == NULL )
     {
         DMOD_LOG_ERROR("Invalid source or destination in cp command\n");
@@ -78,27 +82,20 @@ int Dmod_Main( int argc, char** argv )
         alloced_dest_path = true;
     }
 
-    void* src_file = Dmod_FileOpen(source, "rb");
+    src_file = Dmod_FileOpen(source, "rb");
     if( src_file == NULL )
     {
         DMOD_LOG_ERROR("Failed to open source file '%s'\n", source);
-        if(alloced_dest_path)
-        {
-            Dmod_Free((void*)destination);
-        }
-        return -1;
+        result = -1;
+        goto cleanup;
     }
 
-    void* dest_file = Dmod_FileOpen(destination, "wb");
+    dest_file = Dmod_FileOpen(destination, "wb");
     if( dest_file == NULL )
     {
         DMOD_LOG_ERROR("Failed to open destination file '%s'\n", destination);
-        Dmod_FileClose(src_file);
-        if(alloced_dest_path)
-        {
-            Dmod_Free((void*)destination);
-        }
-        return -1;
+        result = -1;
+        goto cleanup;
     }
 
     char buffer[4096];
@@ -109,21 +106,23 @@ int Dmod_Main( int argc, char** argv )
         if( bytes_written < bytes_read )
         {
             DMOD_LOG_ERROR("Failed to write to destination file '%s'\n", destination);
-            Dmod_FileClose(src_file);
-            Dmod_FileClose(dest_file);
-            if(alloced_dest_path)
-            {
-                Dmod_Free((void*)destination);
-            }
-            return -1;
+            result = -1;
+            goto cleanup;
         }
     }
 
-    Dmod_FileClose(src_file);
-    Dmod_FileClose(dest_file);
+cleanup:
+    if( src_file != NULL )
+    {
+        Dmod_FileClose(src_file);
+    }
+    if( dest_file != NULL )
+    {
+        Dmod_FileClose(dest_file);
+    }
     if(alloced_dest_path)
     {
         Dmod_Free((void*)destination);
     }
-    return 0;
+    return result;
 }
