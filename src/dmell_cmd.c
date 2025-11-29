@@ -72,8 +72,12 @@ static char* duplicate_arg( const char* arg, size_t len )
     {
         return NULL;
     }
-    memcpy( new_arg, arg, len );
-    new_arg[len] = '\0';
+    memset( new_arg, 0, len + 1 );
+    if ((arg[0] == '"' && arg[len - 1] == '"') || (arg[0] == '\'' && arg[len - 1] == '\'')) {
+        memcpy(new_arg, arg + 1, len - 2);
+    } else {
+        memcpy(new_arg, arg, len);
+    }
     return new_arg;
 }
 

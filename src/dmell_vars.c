@@ -183,8 +183,24 @@ dmell_var_t* dmell_add_variable( dmell_var_t* head, const char* name, const char
         return head;    
     }
 
-    new_var->next = head;
-    return new_var;
+    new_var->next = NULL;
+
+    // If the list is empty, the new variable becomes the head
+    if(head == NULL)
+    {
+        return new_var;
+    }
+
+    // Find the last element in the list
+    dmell_var_t* current = head;
+    while(current->next != NULL)
+    {
+        current = current->next;
+    }
+
+    // Add the new variable at the end
+    current->next = new_var;
+    return head;
 }
 
 /**
@@ -375,6 +391,7 @@ int dmell_expand_variables( dmell_var_t* head, const char* str, size_t str_len, 
                 const char* var_value = dmell_get_variable_value(head, var_name_cpy);
                 const char* var_value_end = var_value != NULL ? var_value + strlen(var_value) : NULL;
                 required_size += dmell_add_to_string(dst_ptr, end_dst, var_value, var_value_end);
+                dst_ptr = dst != NULL ? dst + required_size : NULL;
             }
             ptr = get_var_end( var_start, end_ptr );
         }

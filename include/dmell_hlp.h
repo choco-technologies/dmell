@@ -13,7 +13,7 @@
 static inline const char* dmell_skip_whitespaces( const char* str, const char* end_ptr )
 {
     const char* ptr = str;
-    while(ptr < end_ptr && (*ptr == ' ' || *ptr == '\t') )
+    while(ptr < end_ptr && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n') )
     {
         ptr++;
     }

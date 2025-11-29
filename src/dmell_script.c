@@ -2,6 +2,7 @@
 #include <string.h>
 #include "dmell_script.h"
 #include "dmod.h"
+#include "dmell_hlp.h"
 
 dmell_script_ctx_t g_dmell_global_script_ctx = {
     .last_exit_code = 0,
@@ -48,7 +49,14 @@ int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len
         DMOD_LOG_ERROR("Invalid arguments to dmell_run_script_line: %p, %p, %zu\n", ctx, line, len);
         return -EINVAL;
     }
-    const char* comment_start = find_comment_start( line, line + len );
+    const char* end_ptr = line + len;
+    line = dmell_skip_whitespaces( line, end_ptr );
+    if( line >= end_ptr )
+    {
+        // Line is empty or whitespace only
+        return 0;
+    }
+    const char* comment_start = find_comment_start( line, end_ptr );
     size_t effective_len = comment_start - line;
     if( effective_len == 0 )
     {
@@ -109,11 +117,6 @@ int dmell_run_script_file(const char* file_path, int argc, char** argv)
         return -ENOENT;
     }
 
-    dmell_script_ctx_t script_ctx = {
-        .last_exit_code = 0,
-        .variables      = NULL
-    };
-
     size_t line_len = 0;
     char* line = Dmod_Malloc( DMELL_MAX_SCRIPT_LINE_LENGTH );
     if (line == NULL )
@@ -128,7 +131,7 @@ int dmell_run_script_file(const char* file_path, int argc, char** argv)
     {
         line_number++;
         line_len = strlen( line );
-        int exit_code = dmell_run_script_line( &script_ctx, line, line_len );
+        int exit_code = dmell_run_script_line( &g_dmell_global_script_ctx, line, line_len );
         if( exit_code < 0 )
         {
             DMOD_LOG_ERROR("Error executing line %d in script file %s\n", line_number, file_path);

@@ -1,8 +1,10 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <dmod.h>
+#include <string.h>
 #include "dmell_cmd.h"
 #include "dmell_line.h"
+#include "dmell_hlp.h"
 
 /**
  * @brief Helper function to check if the current position is an 'OR' separator (||).
@@ -251,7 +253,7 @@ int dmell_run_line(const char* line, size_t len)
     int last_exit_code = 0;
     int result = 0;
     bool first_command = true;
-    while( ptr < end_ptr )
+    while( ptr < end_ptr && *ptr != '\0' )
     {
         // Find the next command separator
         dmell_line_sep_t sep = dmell_line_sep_none;
