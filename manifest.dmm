@@ -11,10 +11,6 @@ dmell https://github.com/choco-technologies/dmell/releases/download/v<version>/d
 # ===============    Command modules    ===============
 # Command modules are included in the same release package as dmell
 # They can be installed separately using dmf-get
-$version-available cp
-$version-available mv
-$version-available ls
-$version-available cat
 cp https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 mv https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 ls https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
