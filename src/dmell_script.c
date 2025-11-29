@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <string.h>
 #include "dmell_script.h"
 #include "dmod.h"
 
@@ -23,6 +24,14 @@ static const char* find_comment_start( const char* str, const char* end_ptr )
     return end_ptr;
 }
 
+/**
+ * @brief Executes a line of commands in the context of a script, with variable expansion.
+ * 
+ * @param ctx Script execution context
+ * @param line Command line string
+ * @param len Length of the command line string
+ * @return  int Exit code of the last executed command, or negative value on error
+ */
 int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len )
 {
     if( ctx == NULL || line == NULL || len == 0 )
@@ -69,8 +78,57 @@ int dmell_run_script_line( dmell_script_ctx_t* ctx, const char* line, size_t len
     return exit_code;
 }
 
+/**
+ * @brief Executes a script file with given arguments.
+ * 
+ * @param file_path Path to the script file
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code of the script execution, or negative value on error
+ */
 int dmell_run_script_file(const char* file_path, int argc, char** argv)
 {
-    // Implementation of script file execution goes here
-    return -1;
+    if( file_path == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid file path in dmell_run_script_file: %p\n", file_path);
+        return -EINVAL;
+    }
+
+    void* file = Dmod_FileOpen( file_path, "r" );
+    if( file == NULL )
+    {
+        DMOD_LOG_ERROR("Failed to open script file: %s\n", file_path);
+        return -ENOENT;
+    }
+
+    dmell_script_ctx_t script_ctx = {
+        .last_exit_code = 0,
+        .variables      = NULL
+    };
+
+    size_t line_len = 0;
+    char* line = Dmod_Malloc( DMELL_MAX_SCRIPT_LINE_LENGTH );
+    if (line == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in dmell_run_script_file for line buffer\n");
+        Dmod_FileClose( file );
+        return -ENOMEM;
+    }
+    
+    int line_number = 0;
+    while( Dmod_FileReadLine( line, DMELL_MAX_SCRIPT_LINE_LENGTH, file ) != NULL )
+    {
+        line_number++;
+        line_len = strlen( line );
+        int exit_code = dmell_run_script_line( &script_ctx, line, line_len );
+        if( exit_code < 0 )
+        {
+            DMOD_LOG_ERROR("Error executing line %d in script file %s\n", line_number, file_path);
+            Dmod_Free( line );
+            Dmod_FileClose( file );
+            return exit_code;
+        }
+    }
+
+    return 0;
 }

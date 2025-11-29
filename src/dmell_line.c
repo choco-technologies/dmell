@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <errno.h>
+#include <dmod.h>
 #include "dmell_cmd.h"
 #include "dmell_line.h"
 

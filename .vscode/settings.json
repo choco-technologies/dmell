@@ -2,9 +2,11 @@
     "files.associations": {
         "dmfsi.h": "c",
         "dmod.h": "c",
-        "dmlist.h": "c"
+        "dmlist.h": "c",
+        "dmell_defs.h": "c"
     },
     "C_Cpp.default.defines": [
-        "DMOD_MODULE_NAME=\"dmell\""
+        "DMOD_MODULE_NAME=\"dmell\"",
+        "DMOD_MODULE_VERSION=\"0.1.0\""
     ]
 }

@@ -5,6 +5,11 @@
 #include "dmell_vars.h"
 
 /** 
+ * @brief Maximum length of a script line.
+ */
+#define DMELL_MAX_SCRIPT_LINE_LENGTH    512 
+
+/** 
  * @brief Context structure for command line execution.
  */
 typedef struct 
