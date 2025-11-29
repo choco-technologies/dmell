@@ -3,7 +3,7 @@
   "displayName": "DMELL Script Language Support",
   "description": "Syntax highlighting for DMELL Script (.dme) files",
   "version": "1.0.0",
-  "publisher": "ChocoTechnologiesDMELL",
+  "publisher": "ChocoTechnologiesDMOD",
   "repository": {
     "type": "git",
     "url": "https://github.com/choco-technologies/dmell"
