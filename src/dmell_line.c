@@ -266,19 +266,13 @@ int dmell_run_line(const char* line, size_t len)
         {
             // Determine the length of the current command
             size_t cmd_len = sep_ptr - ptr;
-            if(cmd_len == 0)
+            if( cmd_len > 0 )
             {
-                // Empty command, skip
-                ptr = skip_separator( sep_ptr, end_ptr, sep );
-                prev_sep = sep;
-                first_command = false;
-                continue;
+                // Execute the current command
+                int exit_code = dmell_run_command_string( ptr, cmd_len );
+                result = join_results( last_exit_code, exit_code, prev_sep );
+                last_exit_code = exit_code;
             }
-    
-            // Execute the current command
-            int exit_code = dmell_run_command_string( ptr, cmd_len );
-            result = join_results( last_exit_code, exit_code, prev_sep );
-            last_exit_code = exit_code;
         }
 
         // Move to the next command
