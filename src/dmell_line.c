@@ -253,6 +253,7 @@ int dmell_run_line(const char* line, size_t len)
     int last_exit_code = 0;
     int result = 0;
     bool first_command = true;
+    dmell_line_sep_t prev_sep = dmell_line_sep_none;
     while( ptr < end_ptr && *ptr != '\0' )
     {
         // Find the next command separator
@@ -260,7 +261,8 @@ int dmell_run_line(const char* line, size_t len)
         const char* sep_ptr = find_next_command_separator( ptr, end_ptr, &sep );
 
         // Check if we should execute the current command - lazy evaluation
-        if( first_command || should_execute_command( last_exit_code, sep ) )
+        // Use the previous separator to decide if the current command should run
+        if( first_command || should_execute_command( last_exit_code, prev_sep ) )
         {
             // Determine the length of the current command
             size_t cmd_len = sep_ptr - ptr;
@@ -268,18 +270,20 @@ int dmell_run_line(const char* line, size_t len)
             {
                 // Empty command, skip
                 ptr = skip_separator( sep_ptr, end_ptr, sep );
+                prev_sep = sep;
                 first_command = false;
                 continue;
             }
     
             // Execute the current command
             int exit_code = dmell_run_command_string( ptr, cmd_len );
-            result = join_results( last_exit_code, exit_code, sep );
+            result = join_results( last_exit_code, exit_code, prev_sep );
             last_exit_code = exit_code;
         }
 
         // Move to the next command
         ptr = skip_separator( sep_ptr, end_ptr, sep );
+        prev_sep = sep;
         first_command = false;
     }
 
