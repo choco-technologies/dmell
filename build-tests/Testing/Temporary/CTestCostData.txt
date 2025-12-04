@@ -1,4 +1,0 @@
-tests_dmell_vars 5 0.000429247
-tests_dmell_cmd 1 0.0018591
-tests_dmell_line 1 0.00177434
----
