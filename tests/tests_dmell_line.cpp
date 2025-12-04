@@ -154,7 +154,7 @@ TEST_F(DmellLineTest, AndSeparatorBothSuccess)
 }
 
 /**
- * @brief Test AND separator (&&) with first command line_failing
+ * @brief Test AND separator (&&) with first command failing
  */
 TEST_F(DmellLineTest, AndSeparatorFirstFails)
 {
@@ -163,7 +163,7 @@ TEST_F(DmellLineTest, AndSeparatorFirstFails)
     int result = dmell_run_line(line, strlen(line));
     
     EXPECT_NE(result, 0);
-    // Second command should NOT execute because first line_failed
+    // Second command should NOT execute because first failed
     EXPECT_EQ(g_call_count, 1);
 }
 
@@ -182,7 +182,7 @@ TEST_F(DmellLineTest, OrSeparatorFirstSuccess)
 }
 
 /**
- * @brief Test OR separator (||) with first command line_failing
+ * @brief Test OR separator (||) with first command failing
  */
 TEST_F(DmellLineTest, OrSeparatorFirstFails)
 {
@@ -191,7 +191,7 @@ TEST_F(DmellLineTest, OrSeparatorFirstFails)
     int result = dmell_run_line(line, strlen(line));
     
     EXPECT_EQ(result, 0);
-    // Second command SHOULD execute because first line_failed
+    // Second command SHOULD execute because first failed
     EXPECT_EQ(g_call_count, 2);
 }
 
@@ -212,7 +212,7 @@ TEST_F(DmellLineTest, MultipleSequenceCommands)
 }
 
 /**
- * @brief Test sequence ignores previous line_failure
+ * @brief Test sequence ignores previous failure
  */
 TEST_F(DmellLineTest, SequenceIgnoresPreviousFailure)
 {
