@@ -3,6 +3,10 @@
 # =====================================================================
 cmake_minimum_required(VERSION 3.18)
 
+# ======================================================================
+#               Unit Tests Option (early to control build behavior)
+# ======================================================================
+option(DMELL_BUILD_TESTS "Build unit tests" OFF)
 
 # ======================================================================
 #               DMOD FFS
@@ -48,56 +52,69 @@ include(${DMOD_DIR}/paths.cmake)
 dmod_setup_external_module()
 
 # ======================================================================
-#               DMFFS Module Configuration
+#               Build modules only when not in test mode
 # ======================================================================
-# Name of the module 
-set(DMOD_MODULE_NAME        dmell)
+if(NOT DMELL_BUILD_TESTS)
+    # ======================================================================
+    #               DMFFS Module Configuration
+    # ======================================================================
+    # Name of the module 
+    set(DMOD_MODULE_NAME        dmell)
 
-# Version is already set above and used in project()
-# No need to set it again here
+    # Version is already set above and used in project()
+    # No need to set it again here
 
-# Author (should be string)
-set(DMOD_AUTHOR_NAME        Patryk Kubiak)
+    # Author (should be string)
+    set(DMOD_AUTHOR_NAME        Patryk Kubiak)
 
-# Stack size for the module (should be integer)
-set(DMOD_STACK_SIZE         1024)
+    # Stack size for the module (should be integer)
+    set(DMOD_STACK_SIZE         1024)
 
-#
-#   dmod_add_library - create a library module
-#   it has the same signature as add_library
-#   and can be used in the same way after the creation
-#   (for example, to link libraries)
-#
-dmod_add_executable(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
-    # List of source files - can include C and C++ files
-    src/dmell.c
-    src/dmell_cmd.c
-    src/dmell_line.c
-    src/dmell_script.c
-    src/dmell_vars.c
-    src/dmell_ia.c
-    src/dmell_handlers.c
-)
+    #
+    #   dmod_add_library - create a library module
+    #   it has the same signature as add_library
+    #   and can be used in the same way after the creation
+    #   (for example, to link libraries)
+    #
+    dmod_add_executable(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
+        # List of source files - can include C and C++ files
+        src/dmell.c
+        src/dmell_cmd.c
+        src/dmell_line.c
+        src/dmell_script.c
+        src/dmell_vars.c
+        src/dmell_ia.c
+        src/dmell_handlers.c
+    )
 
-target_include_directories(${DMOD_MODULE_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+    target_include_directories(${DMOD_MODULE_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    # ======================================================================
+    #               Command Modules
+    # ======================================================================
+    # Add command modules as subdirectories
+    add_subdirectory(commands/cp)
+    add_subdirectory(commands/mv)
+    add_subdirectory(commands/ls)
+    add_subdirectory(commands/cat)
+    add_subdirectory(commands/mkdir)
+    add_subdirectory(commands/touch)
+    add_subdirectory(commands/head)
+    add_subdirectory(commands/tail)
+    add_subdirectory(commands/grep)
+    add_subdirectory(commands/rm)
+    add_subdirectory(commands/rmdir)
+    add_subdirectory(commands/find)
+    add_subdirectory(commands/which)
+    add_subdirectory(commands/printf)
+endif()
 
 # ======================================================================
-#               Command Modules
+#               Unit Tests
 # ======================================================================
-# Add command modules as subdirectories
-add_subdirectory(commands/cp)
-add_subdirectory(commands/mv)
-add_subdirectory(commands/ls)
-add_subdirectory(commands/cat)
-add_subdirectory(commands/mkdir)
-add_subdirectory(commands/touch)
-add_subdirectory(commands/head)
-add_subdirectory(commands/tail)
-add_subdirectory(commands/grep)
-add_subdirectory(commands/rm)
-add_subdirectory(commands/rmdir)
-add_subdirectory(commands/find)
-add_subdirectory(commands/which)
-add_subdirectory(commands/printf)
+if(DMELL_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

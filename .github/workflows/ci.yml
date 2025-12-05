@@ -23,3 +23,11 @@ jobs:
           cd build
           cmake .. -DDMOD_MODE=DMOD_MODULE
           cmake --build .
+      
+      - name: Build and run unit tests
+        run: |
+          mkdir -p build-tests
+          cd build-tests
+          cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMELL_BUILD_TESTS=ON
+          cmake --build .
+          ctest --output-on-failure
