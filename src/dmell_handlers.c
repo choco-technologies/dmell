@@ -232,6 +232,50 @@ int dmell_handler_exit( int argc, char** argv )
 }
 
 /**
+ * @brief Handler for the 'setloglevel' command.
+ * 
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_setloglevel( int argc, char** argv )
+{
+    if( argc < 2 )
+    {
+        DMOD_LOG_ERROR("Usage: setloglevel <verbose|info|warning|error>\n");
+        return -EINVAL;
+    }
+
+    const char* level = argv[1];
+    Dmod_LogLevel_t log_level;
+
+    if( strcmp( level, "verbose" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Verbose;
+    }
+    else if( strcmp( level, "info" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Info;
+    }
+    else if( strcmp( level, "warning" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Warn;
+    }
+    else if( strcmp( level, "error" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Error;
+    }
+    else
+    {
+        DMOD_LOG_ERROR("Invalid log level: %s. Use verbose, info, warning, or error.\n", level);
+        return -EINVAL;
+    }
+
+    Dmod_SetLogLevel( log_level );
+    return 0;
+}
+
+/**
  * @brief Helper function to read the shebang line and extract the interpreter.
  * 
  * @param file_name Name of the script file
@@ -365,6 +409,9 @@ int dmell_handler_default( int argc, char** argv )
  */
 int dmell_register_handlers( void )
 {
+    // Set default log level to warning
+    Dmod_SetLogLevel( Dmod_LogLevel_Warn );
+
     dmell_register_command_handler( "echo", dmell_handler_echo );
     dmell_register_command_handler( "set", dmell_handler_set );
     dmell_register_command_handler( "unset", dmell_handler_unset );
@@ -372,6 +419,7 @@ int dmell_register_handlers( void )
     dmell_register_command_handler( "cd", dmell_handler_cd );
     dmell_register_command_handler( "pwd", dmell_handler_pwd );
     dmell_register_command_handler( "exit", dmell_handler_exit );
+    dmell_register_command_handler( "setloglevel", dmell_handler_setloglevel );
 
     dmell_set_default_handler( dmell_handler_default );
     return 0;

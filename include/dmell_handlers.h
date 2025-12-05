@@ -9,6 +9,7 @@ extern int dmell_handler_unset( int argc, char** argv );
 extern int dmell_handler_cd( int argc, char** argv );
 extern int dmell_handler_pwd( int argc, char** argv );
 extern int dmell_handler_exit( int argc, char** argv );
+extern int dmell_handler_setloglevel( int argc, char** argv );
 
 extern int dmell_handler_default( int argc, char** argv );
 
