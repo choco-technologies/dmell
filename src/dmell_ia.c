@@ -11,8 +11,8 @@ static void print_prompt()
 {
     const char* host_name = Dmod_GetEnv( "HOSTNAME" );
     host_name = ( host_name != NULL ) ? host_name : "dmell";
-    const char* cwd = Dmod_GetCwd( NULL, 0 );
-    cwd = ( cwd != NULL ) ? cwd : "<unknown>";
+    char cwd[256] = {0};
+    Dmod_GetCwd( cwd, sizeof(cwd) );
     Dmod_Printf("\033[35;1m%s\033[37;1m@\033[34;1m%s\033[0m> ", host_name, cwd);
 }
 
