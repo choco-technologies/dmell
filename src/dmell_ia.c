@@ -4,6 +4,9 @@
 #include "dmod.h"
 #include "dmell_script.h"
 
+// Maximum length for word completion buffers
+#define MAX_COMPLETION_WORD_LEN 256
+
 /**
  * @brief Helper function to print the command prompt.
  */
@@ -11,7 +14,7 @@ static void print_prompt()
 {
     const char* host_name = Dmod_GetEnv( "HOSTNAME" );
     host_name = ( host_name != NULL ) ? host_name : "dmell";
-    char cwd[256] = {0};
+    char cwd[1024] = {0};
     Dmod_GetCwd( cwd, sizeof(cwd) );
     Dmod_Printf("\033[35;1m%s\033[37;1m@\033[34;1m%s\033[0m> ", host_name, cwd);
 }
@@ -31,7 +34,7 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         return false;
     }
 
-    char cwd[256] = {0};
+    char cwd[1024] = {0};
     Dmod_GetCwd(cwd, sizeof(cwd));
     
     void* dir = Dmod_OpenDir(cwd);
@@ -103,7 +106,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
         return position;
     }
 
-    char partial_word[256];
+    char partial_word[MAX_COMPLETION_WORD_LEN];
     if( word_len >= sizeof(partial_word) )
     {
         return position; // Word too long
@@ -113,7 +116,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     partial_word[word_len] = '\0';
 
     // Try to find a matching module name first
-    char match[256];
+    char match[MAX_COMPLETION_WORD_LEN];
     bool found = Dmod_FindMatch(partial_word, match, sizeof(match));
     
     // If no module match, try file completion
