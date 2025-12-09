@@ -20,10 +20,10 @@ static void print_prompt()
 }
 
 /**
- * @brief Find matching file or directory name in the current directory.
+ * @brief Find matching file or directory name, supporting paths.
  * 
- * @param partial_name Partial file name to match
- * @param out_match Output buffer for the matching name
+ * @param partial_name Partial file name or path to match
+ * @param out_match Output buffer for the matching name (full path if input contained path)
  * @param max_length Maximum length of the output buffer
  * @return true if a match was found, false otherwise
  */
@@ -51,14 +51,60 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         return false; // Empty string or not null-terminated within bounds
     }
 
-    char cwd[1024] = {0};
-    Dmod_GetCwd(cwd, sizeof(cwd));
+    // Parse the partial path to extract directory and filename parts
+    const char* last_slash = NULL;
+    for( size_t i = 0; i < partial_len; i++ )
+    {
+        if( partial_name[i] == '/' )
+        {
+            last_slash = partial_name + i;
+        }
+    }
+
+    char search_dir[1024] = {0};
+    const char* partial_filename;
+    size_t partial_filename_len;
     
-    void* dir = Dmod_OpenDir(cwd);
+    if( last_slash != NULL )
+    {
+        // Path contains a slash - extract directory and filename parts
+        size_t dir_len = last_slash - partial_name + 1; // Include the slash
+        if( dir_len + 1 > sizeof(search_dir) )
+        {
+            return false; // Directory path too long (need space for null terminator)
+        }
+        
+        strncpy(search_dir, partial_name, dir_len);
+        search_dir[dir_len] = '\0';
+        
+        // Handle the case where the path is just "/"
+        if( dir_len == 1 && search_dir[0] == '/' )
+        {
+            // Keep it as "/"
+        }
+        else
+        {
+            // Remove trailing slash for directory opening
+            search_dir[dir_len - 1] = '\0';
+        }
+        
+        partial_filename = last_slash + 1;
+        partial_filename_len = partial_len - (last_slash - partial_name + 1);
+    }
+    else
+    {
+        // No slash - search in current directory
+        Dmod_GetCwd(search_dir, sizeof(search_dir));
+        partial_filename = partial_name;
+        partial_filename_len = partial_len;
+    }
+    
+    void* dir = Dmod_OpenDir(search_dir);
     if( dir == NULL )
     {
         return false;
     }
+    
     const char* entry;
     bool found = false;
     
@@ -70,16 +116,39 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
             continue;
         }
         
-        // Check if entry starts with partial_name
-        if( strncmp(entry, partial_name, partial_len) == 0 )
+        // Check if entry starts with the partial filename
+        if( strncmp(entry, partial_filename, partial_filename_len) == 0 )
         {
-            size_t entry_len = strlen(entry);
-            if( entry_len + 1 <= max_length )
+            // Build the full match path
+            if( last_slash != NULL )
             {
-                strncpy(out_match, entry, max_length - 1);
-                out_match[max_length - 1] = '\0';
-                found = true;
-                break;
+                // Reconstruct the path with the directory prefix
+                size_t dir_prefix_len = last_slash - partial_name + 1;
+                size_t entry_len = strlen(entry);
+                
+                if( dir_prefix_len + entry_len + 1 <= max_length )
+                {
+                    // Safely construct the full path using snprintf
+                    int written = Dmod_SnPrintf(out_match, max_length, "%.*s%s", 
+                                                (int)dir_prefix_len, partial_name, entry);
+                    if( written > 0 && (size_t)written < max_length )
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // No path prefix, just return the filename
+                size_t entry_len = strlen(entry);
+                if( entry_len + 1 <= max_length )
+                {
+                    strncpy(out_match, entry, max_length - 1);
+                    out_match[max_length - 1] = '\0';
+                    found = true;
+                    break;
+                }
             }
         }
     }
