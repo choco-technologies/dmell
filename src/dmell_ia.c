@@ -20,8 +20,9 @@ static void print_prompt()
  * @brief Helper function to read a line of input from the user.
  * 
  * This function reads characters from stdin until a newline or EOF is encountered.
- * It supports backspace handling (ASCII 127 DEL and 8 BS) to allow editing of the
- * input line. Visual feedback for backspace is only provided when echo is enabled.
+ * It temporarily disables terminal echo to manually control character display and
+ * supports backspace handling (ASCII 127 DEL and 8 BS) using VT100 escape sequences
+ * for proper visual feedback. Original echo settings are restored after reading.
  * 
  * @param out_len Output parameter to hold the length of the read line
  * @return char* The read line, or NULL on failure
@@ -38,9 +39,10 @@ static char* read_line( size_t* out_len )
         return NULL;
     }
 
-    // Cache stdin flags to avoid repeated system calls
-    uint32_t stdin_flags = Dmod_Stdin_GetFlags();
-    bool echo_enabled = (stdin_flags & DMOD_STDIN_FLAG_ECHO) != 0;
+    // Save original stdin flags and disable echo to handle input manually
+    uint32_t original_flags = Dmod_Stdin_GetFlags();
+    Dmod_Stdin_SetFlags(original_flags & ~DMOD_STDIN_FLAG_ECHO);
+    bool should_echo = (original_flags & DMOD_STDIN_FLAG_ECHO) != 0;
 
     size_t position = 0;
     while( true )
@@ -56,17 +58,22 @@ static char* read_line( size_t* out_len )
             if( position > 0 )
             {
                 position--;
-                // Erase character from terminal if echo is enabled
-                // When echo is disabled, no visual feedback is needed
-                if( echo_enabled )
+                // Erase character from terminal using VT100 sequences
+                // Move cursor back, write space, move cursor back again
+                if( should_echo )
                 {
-                    Dmod_Printf("\b \b");
+                    Dmod_Printf("\033[1D \033[1D");
                 }
             }
         }
         else
         {
             buffer[position] = (char)c;
+            // Manually echo the character if original echo was enabled
+            if( should_echo )
+            {
+                Dmod_Printf("%c", (char)c);
+            }
             position++;
             // Check if buffer needs to be expanded before next write
             // This ensures buffer[position] is always valid for the next iteration
@@ -78,12 +85,16 @@ static char* read_line( size_t* out_len )
                 {
                     DMOD_LOG_ERROR("Memory allocation failed in read_line during buffer resize\n");
                     Dmod_Free( buffer );
+                    Dmod_Stdin_SetFlags(original_flags);
                     return NULL;
                 }
                 buffer = new_buffer;
             }
         }
     }
+
+    // Restore original stdin flags
+    Dmod_Stdin_SetFlags(original_flags);
 
     if( out_len != NULL )
     {
