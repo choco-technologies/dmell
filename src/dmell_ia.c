@@ -178,6 +178,8 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
                                                 (int)dir_prefix_len, partial_name, entry);
                     if( written > 0 && (size_t)written < max_length )
                     {
+                        // Ensure null termination
+                        out_match[written] = '\0';
                         found = true;
                         break;
                     }
@@ -247,7 +249,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     strncpy(partial_word, buffer + word_start, word_len);
     partial_word[word_len] = '\0';
 
-    char match[MAX_COMPLETION_WORD_LEN];
+    char match[MAX_COMPLETION_WORD_LEN] = {0};
     bool found = false;
     
     // Determine if we're completing the first word (command) or subsequent words (arguments)
