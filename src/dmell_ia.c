@@ -3,6 +3,54 @@
 #include "dmell_ia.h"
 #include "dmod.h"
 #include "dmell_script.h"
+#include "dmell_cmd.h"
+
+// Maximum length for word completion buffers
+#define MAX_COMPLETION_WORD_LEN 256
+
+// External references to registered commands
+extern dmell_cmd_t* g_registered_commands;
+extern size_t g_registered_command_count;
+
+/**
+ * @brief Find matching built-in command name.
+ * 
+ * @param partial_name Partial command name to match
+ * @param out_match Output buffer for the matching command name
+ * @param max_length Maximum length of the output buffer
+ * @return true if a match was found, false otherwise
+ */
+static bool find_builtin_command_match(const char* partial_name, char* out_match, size_t max_length)
+{
+    if( partial_name == NULL || out_match == NULL || max_length == 0 )
+    {
+        return false;
+    }
+
+    size_t partial_len = strlen(partial_name);
+    if( partial_len == 0 || partial_len >= MAX_COMPLETION_WORD_LEN )
+    {
+        return false;
+    }
+
+    // Search through registered built-in commands
+    for( size_t i = 0; i < g_registered_command_count; i++ )
+    {
+        const char* cmd_name = g_registered_commands[i].name;
+        if( cmd_name != NULL && strncmp(cmd_name, partial_name, partial_len) == 0 )
+        {
+            size_t cmd_len = strlen(cmd_name);
+            if( cmd_len + 1 <= max_length )
+            {
+                strncpy(out_match, cmd_name, max_length - 1);
+                out_match[max_length - 1] = '\0';
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 /**
  * @brief Helper function to print the command prompt.
@@ -14,6 +62,244 @@ static void print_prompt()
     char cwd[256] = {0};
     Dmod_GetCwd( cwd, sizeof(cwd) );
     Dmod_Printf("\033[35;1m%s\033[37;1m@\033[34;1m%s\033[0m> ", host_name, cwd);
+}
+
+/**
+ * @brief Find matching file or directory name, supporting paths.
+ * 
+ * @param partial_name Partial file name or path to match
+ * @param out_match Output buffer for the matching name (full path if input contained path)
+ * @param max_length Maximum length of the output buffer
+ * @return true if a match was found, false otherwise
+ */
+static bool find_file_match(const char* partial_name, char* out_match, size_t max_length)
+{
+    if( partial_name == NULL || out_match == NULL || max_length == 0 )
+    {
+        return false;
+    }
+
+    // Clear output buffer
+    memset(out_match, 0, max_length);
+
+    // Validate partial_name length
+    size_t partial_len = strlen(partial_name);
+    if( partial_len == 0 || partial_len >= MAX_COMPLETION_WORD_LEN )
+    {
+        return false;
+    }
+
+    // Parse the partial path to extract directory and filename parts
+    const char* last_slash = NULL;
+    for( size_t i = 0; i < partial_len; i++ )
+    {
+        if( partial_name[i] == '/' )
+        {
+            last_slash = partial_name + i;
+        }
+    }
+
+    char search_dir[256] = {0};
+    const char* partial_filename;
+    size_t partial_filename_len;
+    
+    if( last_slash != NULL )
+    {
+        // Path contains a slash - extract directory and filename parts
+        size_t dir_len = last_slash - partial_name + 1; // Include the slash
+        if( dir_len + 1 > sizeof(search_dir) )
+        {
+            return false; // Directory path too long (need space for null terminator)
+        }
+        
+        strncpy(search_dir, partial_name, dir_len);
+        search_dir[dir_len] = '\0';
+        
+        // Handle the case where the path is just "/"
+        if( dir_len == 1 && search_dir[0] == '/' )
+        {
+            // Keep it as "/"
+        }
+        else
+        {
+            // Remove trailing slash for directory opening
+            search_dir[dir_len - 1] = '\0';
+        }
+        
+        partial_filename = last_slash + 1;
+        partial_filename_len = partial_len - (last_slash - partial_name + 1);
+    }
+    else
+    {
+        // No slash - search in current directory
+        Dmod_GetCwd(search_dir, sizeof(search_dir));
+        partial_filename = partial_name;
+        partial_filename_len = partial_len;
+    }
+    
+    void* dir = Dmod_OpenDir(search_dir);
+    if( dir == NULL )
+    {
+        return false;
+    }
+    
+    const char* entry;
+    bool found = false;
+    
+    while( (entry = Dmod_ReadDir(dir)) != NULL )
+    {
+        // Skip "." and ".." entries
+        if( strcmp(entry, ".") == 0 || strcmp(entry, "..") == 0 )
+        {
+            continue;
+        }
+        
+        // Check if entry starts with the partial filename
+        if( strncmp(entry, partial_filename, partial_filename_len) == 0 )
+        {
+            // Build the full match path
+            if( last_slash != NULL )
+            {
+                // Reconstruct the path with the directory prefix
+                size_t dir_prefix_len = last_slash - partial_name + 1;
+                size_t entry_len = strlen(entry);
+                
+                if( dir_prefix_len + entry_len + 1 <= max_length )
+                {
+                    // Safely construct the full path using snprintf
+                    strncpy(out_match, partial_name, dir_prefix_len);
+                    strncpy(out_match + dir_prefix_len, entry, max_length - dir_prefix_len - 1);
+                    out_match[dir_prefix_len + entry_len] = '\0';
+                    found = true;
+                }
+            }
+            else
+            {
+                // No path prefix, just return the filename
+                size_t entry_len = strlen(entry);
+                if( entry_len + 1 <= max_length )
+                {
+                    strncpy(out_match, entry, max_length - 1);
+                    out_match[max_length - 1] = '\0';
+                    found = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    Dmod_CloseDir(dir);
+    return found;
+}
+
+/**
+ * @brief Handle tab completion for the current input buffer.
+ * 
+ * This function attempts to complete the current word in the buffer by:
+ * 1. For the first word (command position):
+ *    a. First trying to match against built-in commands
+ *    b. Then trying to match against module names using Dmod_FindMatch
+ * 2. For all words, falling back to file/directory completion if no command match
+ * 
+ * @param buffer The input buffer
+ * @param position Current position in the buffer
+ * @param buffer_size Current size of the buffer
+ * @param should_echo Whether to echo the completion to the terminal
+ * @return size_t New position in the buffer after completion
+ */
+static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer_size, bool should_echo)
+{
+    if( buffer == NULL )
+    {
+        return position;
+    }
+
+    // Find the start of the current word (after the last space or beginning of buffer)
+    size_t word_start = position;
+    while( word_start > 0 && buffer[word_start - 1] != ' ' && buffer[word_start - 1] != '\t' )
+    {
+        word_start--;
+    }
+
+    // Extract the partial word
+    size_t word_len = position - word_start;
+    if( word_len == 0 )
+    {
+        return position;
+    }
+
+    char partial_word[MAX_COMPLETION_WORD_LEN];
+    if( word_len >= sizeof(partial_word) )
+    {
+        return position; // Word too long
+    }
+    
+    strncpy(partial_word, buffer + word_start, word_len);
+    partial_word[word_len] = '\0';
+
+    char match[MAX_COMPLETION_WORD_LEN] = {0};
+    bool found = false;
+    
+    // Determine if we're completing the first word (command) or subsequent words (arguments)
+    // Check if all characters before word_start are whitespace
+    bool is_first_word = true;
+    for( size_t i = 0; i < word_start; i++ )
+    {
+        if( buffer[i] != ' ' && buffer[i] != '\t' )
+        {
+            is_first_word = false;
+            break;
+        }
+    }
+    
+    if( is_first_word )
+    {
+        // For the first word, prioritize built-in commands, then modules
+        found = find_builtin_command_match(partial_word, match, sizeof(match));
+        
+        if( !found )
+        {
+            found = Dmod_FindMatch(partial_word, match, sizeof(match));
+        }
+    }
+    
+    // For subsequent words or if no command match found, try file completion
+    if( !found )
+    {
+        found = find_file_match(partial_word, match, sizeof(match));
+    }
+
+    if( found )
+    {
+        size_t match_len = strlen(match);
+        
+        // Verify that the match is actually longer than our partial word
+        if( match_len <= word_len )
+        {
+            return position;
+        }
+        
+        size_t completion_len = match_len - word_len;
+        
+        // Check if there's enough space in the buffer
+        if( position + completion_len >= buffer_size )
+        {
+            return position;
+        }
+
+        // Append the completion to the buffer
+        for( size_t i = 0; i < completion_len; i++ )
+        {
+            buffer[position] = match[word_len + i];
+            if( should_echo )
+            {
+                Dmod_Printf("%c", buffer[position]);
+            }
+            position++;
+        }
+    }
+
+    return position;
 }
 
 /**
@@ -54,6 +340,10 @@ static char* read_line( size_t* out_len )
             buffer[position] = '\0';
             Dmod_Printf("\n");
             break;
+        }
+        else if( c == 9 ) // Tab character
+        {
+            position = handle_tab_completion(buffer, position, buffer_size, should_echo);
         }
         else if( c == 127 || c == 8 ) // Backspace (DEL or BS)
         {
