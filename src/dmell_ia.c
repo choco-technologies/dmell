@@ -3,9 +3,54 @@
 #include "dmell_ia.h"
 #include "dmod.h"
 #include "dmell_script.h"
+#include "dmell_cmd.h"
 
 // Maximum length for word completion buffers
 #define MAX_COMPLETION_WORD_LEN 256
+
+// External references to registered commands
+extern dmell_cmd_t* g_registered_commands;
+extern size_t g_registered_command_count;
+
+/**
+ * @brief Find matching built-in command name.
+ * 
+ * @param partial_name Partial command name to match
+ * @param out_match Output buffer for the matching command name
+ * @param max_length Maximum length of the output buffer
+ * @return true if a match was found, false otherwise
+ */
+static bool find_builtin_command_match(const char* partial_name, char* out_match, size_t max_length)
+{
+    if( partial_name == NULL || out_match == NULL || max_length == 0 )
+    {
+        return false;
+    }
+
+    size_t partial_len = strlen(partial_name);
+    if( partial_len == 0 || partial_len >= MAX_COMPLETION_WORD_LEN )
+    {
+        return false;
+    }
+
+    // Search through registered built-in commands
+    for( size_t i = 0; i < g_registered_command_count; i++ )
+    {
+        const char* cmd_name = g_registered_commands[i].name;
+        if( cmd_name != NULL && strncmp(cmd_name, partial_name, partial_len) == 0 )
+        {
+            size_t cmd_len = strlen(cmd_name);
+            if( cmd_len + 1 <= max_length )
+            {
+                strncpy(out_match, cmd_name, max_length - 1);
+                out_match[max_length - 1] = '\0';
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 /**
  * @brief Helper function to print the command prompt.
@@ -161,8 +206,10 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
  * @brief Handle tab completion for the current input buffer.
  * 
  * This function attempts to complete the current word in the buffer by:
- * 1. First trying to match against module names using Dmod_FindMatch
- * 2. If no module match is found, trying to match against files in the current directory
+ * 1. For the first word (command position):
+ *    a. First trying to match against built-in commands
+ *    b. Then trying to match against module names using Dmod_FindMatch
+ * 2. For all words, falling back to file/directory completion if no command match
  * 
  * @param buffer The input buffer
  * @param position Current position in the buffer
@@ -200,11 +247,33 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     strncpy(partial_word, buffer + word_start, word_len);
     partial_word[word_len] = '\0';
 
-    // Try to find a matching module name first
     char match[MAX_COMPLETION_WORD_LEN];
-    bool found = Dmod_FindMatch(partial_word, match, sizeof(match));
+    bool found = false;
     
-    // If no module match, try file completion
+    // Determine if we're completing the first word (command) or subsequent words (arguments)
+    // Check if all characters before word_start are whitespace
+    bool is_first_word = true;
+    for( size_t i = 0; i < word_start; i++ )
+    {
+        if( buffer[i] != ' ' && buffer[i] != '\t' )
+        {
+            is_first_word = false;
+            break;
+        }
+    }
+    
+    if( is_first_word )
+    {
+        // For the first word, prioritize built-in commands, then modules
+        found = find_builtin_command_match(partial_word, match, sizeof(match));
+        
+        if( !found )
+        {
+            found = Dmod_FindMatch(partial_word, match, sizeof(match));
+        }
+    }
+    
+    // For subsequent words or if no command match found, try file completion
     if( !found )
     {
         found = find_file_match(partial_word, match, sizeof(match));
