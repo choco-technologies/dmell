@@ -69,8 +69,9 @@ static char* read_line( size_t* out_len )
         else
         {
             buffer[position] = (char)c;
-            // Manually echo the character if original echo was enabled
-            if( should_echo )
+            // Manually echo printable characters if original echo was enabled
+            // Only echo printable ASCII characters (32-126) to avoid terminal corruption
+            if( should_echo && c >= 32 && c <= 126 )
             {
                 Dmod_Printf("%c", (char)c);
             }
@@ -85,18 +86,19 @@ static char* read_line( size_t* out_len )
                 {
                     DMOD_LOG_ERROR("Memory allocation failed in read_line during buffer resize\n");
                     Dmod_Free( buffer );
-                    Dmod_Stdin_SetFlags(original_flags);
-                    return NULL;
+                    buffer = NULL;
+                    goto cleanup;
                 }
                 buffer = new_buffer;
             }
         }
     }
 
+cleanup:
     // Restore original stdin flags
     Dmod_Stdin_SetFlags(original_flags);
 
-    if( out_len != NULL )
+    if( buffer != NULL && out_len != NULL )
     {
         *out_len = position;
     }
