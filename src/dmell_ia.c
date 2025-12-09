@@ -167,13 +167,10 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
                 if( dir_prefix_len + entry_len + 1 <= max_length )
                 {
                     // Safely construct the full path using snprintf
-                    int written = Dmod_SnPrintf(out_match, max_length, "%.*s%s", 
-                                                (int)dir_prefix_len, partial_name, entry);
-                    if( written > 0 && (size_t)written < max_length )
-                    {
-                        found = true;
-                        break;
-                    }
+                    strncpy(out_match, partial_name, dir_prefix_len);
+                    strncpy(out_match + dir_prefix_len, entry, max_length - dir_prefix_len - 1);
+                    out_match[dir_prefix_len + entry_len] = '\0';
+                    found = true;
                 }
             }
             else
