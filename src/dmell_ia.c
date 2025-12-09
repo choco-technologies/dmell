@@ -59,7 +59,7 @@ static void print_prompt()
 {
     const char* host_name = Dmod_GetEnv( "HOSTNAME" );
     host_name = ( host_name != NULL ) ? host_name : "dmell";
-    char cwd[1024] = {0};
+    char cwd[256] = {0};
     Dmod_GetCwd( cwd, sizeof(cwd) );
     Dmod_Printf("\033[35;1m%s\033[37;1m@\033[34;1m%s\033[0m> ", host_name, cwd);
 }
@@ -79,21 +79,14 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         return false;
     }
 
-    // Validate that partial_name is a valid null-terminated string
-    // (check first MAX_COMPLETION_WORD_LEN chars to prevent buffer over-read)
-    size_t partial_len = 0;
-    for( size_t i = 0; i < MAX_COMPLETION_WORD_LEN; i++ )
+    // Clear output buffer
+    memset(out_match, 0, max_length);
+
+    // Validate partial_name length
+    size_t partial_len = strlen(partial_name);
+    if( partial_len == 0 || partial_len >= MAX_COMPLETION_WORD_LEN )
     {
-        if( partial_name[i] == '\0' )
-        {
-            partial_len = i;
-            break;
-        }
-    }
-    
-    if( partial_len == 0 || partial_len == MAX_COMPLETION_WORD_LEN )
-    {
-        return false; // Empty string or not null-terminated within bounds
+        return false;
     }
 
     // Parse the partial path to extract directory and filename parts
@@ -106,7 +99,7 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         }
     }
 
-    char search_dir[1024] = {0};
+    char search_dir[256] = {0};
     const char* partial_filename;
     size_t partial_filename_len;
     
@@ -178,8 +171,6 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
                                                 (int)dir_prefix_len, partial_name, entry);
                     if( written > 0 && (size_t)written < max_length )
                     {
-                        // Ensure null termination
-                        out_match[written] = '\0';
                         found = true;
                         break;
                     }
