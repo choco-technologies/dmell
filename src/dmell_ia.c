@@ -19,6 +19,10 @@ static void print_prompt()
 /**
  * @brief Helper function to read a line of input from the user.
  * 
+ * This function reads characters from stdin until a newline or EOF is encountered.
+ * It supports backspace handling (ASCII 127 DEL and 8 BS) to allow editing of the
+ * input line. Visual feedback for backspace is only provided when echo is enabled.
+ * 
  * @param out_len Output parameter to hold the length of the read line
  * @return char* The read line, or NULL on failure
  */
@@ -33,6 +37,10 @@ static char* read_line( size_t* out_len )
         DMOD_LOG_ERROR("Memory allocation failed in read_line\n");
         return NULL;
     }
+
+    // Cache stdin flags to avoid repeated system calls
+    uint32_t stdin_flags = Dmod_Stdin_GetFlags();
+    bool echo_enabled = (stdin_flags & DMOD_STDIN_FLAG_ECHO) != 0;
 
     size_t position = 0;
     while( true )
@@ -50,8 +58,7 @@ static char* read_line( size_t* out_len )
                 position--;
                 // Erase character from terminal if echo is enabled
                 // When echo is disabled, no visual feedback is needed
-                uint32_t flags = Dmod_Stdin_GetFlags();
-                if( flags & DMOD_STDIN_FLAG_ECHO )
+                if( echo_enabled )
                 {
                     Dmod_Printf("\b \b");
                 }
