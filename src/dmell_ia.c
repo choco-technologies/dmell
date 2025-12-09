@@ -34,6 +34,22 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         return false;
     }
 
+    // Validate that partial_name is a valid string (check first MAX_COMPLETION_WORD_LEN chars)
+    size_t partial_len = 0;
+    for( size_t i = 0; i < MAX_COMPLETION_WORD_LEN; i++ )
+    {
+        if( partial_name[i] == '\0' )
+        {
+            partial_len = i;
+            break;
+        }
+    }
+    
+    if( partial_len == 0 || partial_len == MAX_COMPLETION_WORD_LEN )
+    {
+        return false; // Empty string or not null-terminated
+    }
+
     char cwd[1024] = {0};
     Dmod_GetCwd(cwd, sizeof(cwd));
     
@@ -42,8 +58,6 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
     {
         return false;
     }
-
-    size_t partial_len = strlen(partial_name);
     const char* entry;
     bool found = false;
     
@@ -61,7 +75,8 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
             size_t entry_len = strlen(entry);
             if( entry_len + 1 <= max_length )
             {
-                strcpy(out_match, entry);
+                strncpy(out_match, entry, max_length - 1);
+                out_match[max_length - 1] = '\0';
                 found = true;
                 break;
             }
