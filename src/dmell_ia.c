@@ -19,6 +19,11 @@ static void print_prompt()
 /**
  * @brief Helper function to read a line of input from the user.
  * 
+ * This function reads characters from stdin until a newline or EOF is encountered.
+ * It temporarily disables terminal echo to manually control character display and
+ * supports backspace handling (ASCII 127 DEL and 8 BS) using VT100 escape sequences
+ * for proper visual feedback. Original echo settings are restored after reading.
+ * 
  * @param out_len Output parameter to hold the length of the read line
  * @return char* The read line, or NULL on failure
  */
@@ -34,6 +39,12 @@ static char* read_line( size_t* out_len )
         return NULL;
     }
 
+    // Save original stdin flags and disable echo to handle input manually
+    uint32_t original_flags = Dmod_Stdin_GetFlags();
+    uint32_t new_flags = (original_flags & ~(DMOD_STDIN_FLAG_ECHO|DMOD_STDIN_FLAG_CANONICAL));
+    Dmod_Stdin_SetFlags(new_flags);
+    bool should_echo = (original_flags & DMOD_STDIN_FLAG_ECHO) != 0;
+
     size_t position = 0;
     while( true )
     {
@@ -41,28 +52,55 @@ static char* read_line( size_t* out_len )
         if( c == EOF || c == '\n' )
         {
             buffer[position] = '\0';
+            Dmod_Printf("\n");
             break;
+        }
+        else if( c == 127 || c == 8 ) // Backspace (DEL or BS)
+        {
+            if( position > 0 )
+            {
+                position--;
+                // Erase character from terminal using VT100 sequences
+                // Move cursor back, write space, move cursor back again
+                if( should_echo )
+                {
+                    Dmod_Printf("\033[1D \033[1D");
+                }
+            }
         }
         else
         {
             buffer[position] = (char)c;
-        }
-        position++;
-        if( position >= buffer_size )
-        {
-            buffer_size *= 2;
-            char* new_buffer = Dmod_Realloc( buffer, buffer_size );
-            if( new_buffer == NULL )
+            // Manually echo printable characters if original echo was enabled
+            // Only echo printable ASCII characters (32-126) to avoid terminal corruption
+            if( should_echo && c >= 32 && c <= 126 )
             {
-                DMOD_LOG_ERROR("Memory allocation failed in read_line during buffer resize\n");
-                Dmod_Free( buffer );
-                return NULL;
+                Dmod_Printf("%c", (char)c);
             }
-            buffer = new_buffer;
+            position++;
+            // Check if buffer needs to be expanded before next write
+            // This ensures buffer[position] is always valid for the next iteration
+            if( position >= buffer_size )
+            {
+                buffer_size *= 2;
+                char* new_buffer = Dmod_Realloc( buffer, buffer_size );
+                if( new_buffer == NULL )
+                {
+                    DMOD_LOG_ERROR("Memory allocation failed in read_line during buffer resize\n");
+                    Dmod_Free( buffer );
+                    buffer = NULL;
+                    goto cleanup;
+                }
+                buffer = new_buffer;
+            }
         }
     }
 
-    if( out_len != NULL )
+cleanup:
+    // Restore original stdin flags
+    Dmod_Stdin_SetFlags(original_flags);
+
+    if( buffer != NULL && out_len != NULL )
     {
         *out_len = position;
     }
