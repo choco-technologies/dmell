@@ -34,7 +34,8 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         return false;
     }
 
-    // Validate that partial_name is a valid string (check first MAX_COMPLETION_WORD_LEN chars)
+    // Validate that partial_name is a valid null-terminated string
+    // (check first MAX_COMPLETION_WORD_LEN chars to prevent buffer over-read)
     size_t partial_len = 0;
     for( size_t i = 0; i < MAX_COMPLETION_WORD_LEN; i++ )
     {
@@ -47,7 +48,7 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
     
     if( partial_len == 0 || partial_len == MAX_COMPLETION_WORD_LEN )
     {
-        return false; // Empty string or not null-terminated
+        return false; // Empty string or not null-terminated within bounds
     }
 
     char cwd[1024] = {0};
