@@ -68,6 +68,8 @@ static char* read_line( size_t* out_len )
         {
             buffer[position] = (char)c;
             position++;
+            // Check if buffer needs to be expanded before next write
+            // This ensures buffer[position] is always valid for the next iteration
             if( position >= buffer_size )
             {
                 buffer_size *= 2;
