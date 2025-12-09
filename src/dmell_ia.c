@@ -56,7 +56,7 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         if( strncmp(entry, partial_name, partial_len) == 0 )
         {
             size_t entry_len = strlen(entry);
-            if( entry_len < max_length )
+            if( entry_len + 1 <= max_length )
             {
                 strcpy(out_match, entry);
                 found = true;
@@ -84,7 +84,7 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
  */
 static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer_size, bool should_echo)
 {
-    if( buffer == NULL || position == 0 )
+    if( buffer == NULL )
     {
         return position;
     }
@@ -125,6 +125,13 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     if( found )
     {
         size_t match_len = strlen(match);
+        
+        // Verify that the match is actually longer than our partial word
+        if( match_len <= word_len )
+        {
+            return position;
+        }
+        
         size_t completion_len = match_len - word_len;
         
         // Check if there's enough space in the buffer
