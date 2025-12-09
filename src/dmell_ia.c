@@ -17,6 +17,138 @@ static void print_prompt()
 }
 
 /**
+ * @brief Find matching file or directory name in the current directory.
+ * 
+ * @param partial_name Partial file name to match
+ * @param out_match Output buffer for the matching name
+ * @param max_length Maximum length of the output buffer
+ * @return true if a match was found, false otherwise
+ */
+static bool find_file_match(const char* partial_name, char* out_match, size_t max_length)
+{
+    if( partial_name == NULL || out_match == NULL || max_length == 0 )
+    {
+        return false;
+    }
+
+    char cwd[256] = {0};
+    Dmod_GetCwd(cwd, sizeof(cwd));
+    
+    void* dir = Dmod_OpenDir(cwd);
+    if( dir == NULL )
+    {
+        return false;
+    }
+
+    size_t partial_len = strlen(partial_name);
+    const char* entry;
+    bool found = false;
+    
+    while( (entry = Dmod_ReadDir(dir)) != NULL )
+    {
+        // Skip "." and ".." entries
+        if( strcmp(entry, ".") == 0 || strcmp(entry, "..") == 0 )
+        {
+            continue;
+        }
+        
+        // Check if entry starts with partial_name
+        if( strncmp(entry, partial_name, partial_len) == 0 )
+        {
+            size_t entry_len = strlen(entry);
+            if( entry_len < max_length )
+            {
+                strcpy(out_match, entry);
+                found = true;
+                break;
+            }
+        }
+    }
+    
+    Dmod_CloseDir(dir);
+    return found;
+}
+
+/**
+ * @brief Handle tab completion for the current input buffer.
+ * 
+ * This function attempts to complete the current word in the buffer by:
+ * 1. First trying to match against module names using Dmod_FindMatch
+ * 2. If no module match is found, trying to match against files in the current directory
+ * 
+ * @param buffer The input buffer
+ * @param position Current position in the buffer
+ * @param buffer_size Current size of the buffer
+ * @param should_echo Whether to echo the completion to the terminal
+ * @return size_t New position in the buffer after completion
+ */
+static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer_size, bool should_echo)
+{
+    if( buffer == NULL || position == 0 )
+    {
+        return position;
+    }
+
+    // Find the start of the current word (after the last space or beginning of buffer)
+    size_t word_start = position;
+    while( word_start > 0 && buffer[word_start - 1] != ' ' && buffer[word_start - 1] != '\t' )
+    {
+        word_start--;
+    }
+
+    // Extract the partial word
+    size_t word_len = position - word_start;
+    if( word_len == 0 )
+    {
+        return position;
+    }
+
+    char partial_word[256];
+    if( word_len >= sizeof(partial_word) )
+    {
+        return position; // Word too long
+    }
+    
+    strncpy(partial_word, buffer + word_start, word_len);
+    partial_word[word_len] = '\0';
+
+    // Try to find a matching module name first
+    char match[256];
+    bool found = Dmod_FindMatch(partial_word, match, sizeof(match));
+    
+    // If no module match, try file completion
+    if( !found )
+    {
+        found = find_file_match(partial_word, match, sizeof(match));
+    }
+
+    if( found )
+    {
+        size_t match_len = strlen(match);
+        size_t completion_len = match_len - word_len;
+        
+        // Check if there's enough space in the buffer
+        if( position + completion_len >= buffer_size )
+        {
+            return position;
+        }
+
+        // Append the completion to the buffer
+        for( size_t i = 0; i < completion_len; i++ )
+        {
+            buffer[position] = match[word_len + i];
+            if( should_echo )
+            {
+                Dmod_Printf("%c", buffer[position]);
+            }
+            position++;
+        }
+    }
+
+    return position;
+}
+
+/**
  * @brief Helper function to read a line of input from the user.
  * 
  * This function reads characters from stdin until a newline or EOF is encountered.
@@ -54,6 +186,10 @@ static char* read_line( size_t* out_len )
             buffer[position] = '\0';
             Dmod_Printf("\n");
             break;
+        }
+        else if( c == 9 ) // Tab character
+        {
+            position = handle_tab_completion(buffer, position, buffer_size, should_echo);
         }
         else if( c == 127 || c == 8 ) // Backspace (DEL or BS)
         {
