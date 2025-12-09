@@ -43,22 +43,36 @@ static char* read_line( size_t* out_len )
             buffer[position] = '\0';
             break;
         }
+        else if( c == 127 || c == 8 ) // Backspace (DEL or BS)
+        {
+            if( position > 0 )
+            {
+                position--;
+                // Erase character from terminal if echo is enabled
+                // When echo is disabled, no visual feedback is needed
+                uint32_t flags = Dmod_Stdin_GetFlags();
+                if( flags & DMOD_STDIN_FLAG_ECHO )
+                {
+                    Dmod_Printf("\b \b");
+                }
+            }
+        }
         else
         {
             buffer[position] = (char)c;
-        }
-        position++;
-        if( position >= buffer_size )
-        {
-            buffer_size *= 2;
-            char* new_buffer = Dmod_Realloc( buffer, buffer_size );
-            if( new_buffer == NULL )
+            position++;
+            if( position >= buffer_size )
             {
-                DMOD_LOG_ERROR("Memory allocation failed in read_line during buffer resize\n");
-                Dmod_Free( buffer );
-                return NULL;
+                buffer_size *= 2;
+                char* new_buffer = Dmod_Realloc( buffer, buffer_size );
+                if( new_buffer == NULL )
+                {
+                    DMOD_LOG_ERROR("Memory allocation failed in read_line during buffer resize\n");
+                    Dmod_Free( buffer );
+                    return NULL;
+                }
+                buffer = new_buffer;
             }
-            buffer = new_buffer;
         }
     }
 
