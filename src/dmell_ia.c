@@ -41,7 +41,8 @@ static char* read_line( size_t* out_len )
 
     // Save original stdin flags and disable echo to handle input manually
     uint32_t original_flags = Dmod_Stdin_GetFlags();
-    Dmod_Stdin_SetFlags(original_flags & ~DMOD_STDIN_FLAG_ECHO);
+    uint32_t new_flags = (original_flags & ~(DMOD_STDIN_FLAG_ECHO|DMOD_STDIN_FLAG_CANONICAL));
+    Dmod_Stdin_SetFlags(new_flags);
     bool should_echo = (original_flags & DMOD_STDIN_FLAG_ECHO) != 0;
 
     size_t position = 0;
@@ -51,6 +52,7 @@ static char* read_line( size_t* out_len )
         if( c == EOF || c == '\n' )
         {
             buffer[position] = '\0';
+            Dmod_Printf("\n");
             break;
         }
         else if( c == 127 || c == 8 ) // Backspace (DEL or BS)
