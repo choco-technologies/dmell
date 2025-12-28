@@ -521,14 +521,10 @@ int dmell_handler_module( int argc, char** argv )
                     Dmod_Printf("  Path:     %s\n", node.path);
                     
                     // Read module header to get more information
-                    Dmod_ModuleHeader_t header;
-                    if( Dmod_ReadModuleHeader( node.path, &header ) )
-                    {
-                        Dmod_Printf("  Arch:     %s\n", header.Arch);
-                        Dmod_Printf("  CPU:      %s\n", header.CpuName);
-                        Dmod_Printf("  Priority: %u\n", header.Priority);
-                        Dmod_Printf("  Stack:    %llu bytes\n", (unsigned long long)header.RequiredStackSize);
-                    }
+                    Dmod_Printf("  Arch:     %s\n", node.header.Arch);
+                    Dmod_Printf("  CPU:      %s\n", node.header.CpuName);
+                    Dmod_Printf("  Priority: %u\n", node.header.Priority);
+                    Dmod_Printf("  Stack:    %llu bytes\n", (unsigned long long)node.header.RequiredStackSize);
                     
                     // Read required modules
                     Dmod_RequiredModule_t requiredModules[DMOD_MAX_REQUIRED_MODULES] = {0};
