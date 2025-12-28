@@ -202,32 +202,6 @@ static int cmd_info(const char* module_name)
     Dmod_Printf("  Enabled:      %s\n", Dmod_IsModuleEnabled(module_name) ? "Yes" : "No");
     Dmod_Printf("  Used:         %s\n", Dmod_IsModuleUsed(module_name) ? "Yes" : "No");
 
-    // Print required modules information
-    Dmod_Printf("  Required Modules:\n");
-    Dmod_RequiredModule_t required_modules[32];
-    if( Dmod_ReadRequiredModules(file_path, required_modules, 32) )
-    {
-        bool has_requirements = false;
-        for( int i = 0; i < 32; i++ )
-        {
-            if( required_modules[i].Name[0] != '\0' )
-            {
-                has_requirements = true;
-                Dmod_Printf("    - %s (version %s)\n", 
-                           required_modules[i].Name, 
-                           required_modules[i].Version);
-            }
-        }
-        if( !has_requirements )
-        {
-            Dmod_Printf("    (none)\n");
-        }
-    }
-    else
-    {
-        Dmod_Printf("    (unable to read)\n");
-    }
-
     return 0;
 }
 
