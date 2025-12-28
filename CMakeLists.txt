@@ -109,6 +109,7 @@ if(NOT DMELL_BUILD_TESTS)
     add_subdirectory(commands/find)
     add_subdirectory(commands/which)
     add_subdirectory(commands/printf)
+    add_subdirectory(commands/module)
 endif()
 
 # ======================================================================

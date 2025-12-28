@@ -25,3 +25,4 @@ rmdir https://github.com/choco-technologies/dmell/releases/download/v<version>/d
 find https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 which https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 printf https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+module https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
