@@ -214,7 +214,7 @@ static int cmd_info(const char* module_name)
 
     // Print required modules information
     Dmod_Printf("  Required Modules:\n");
-    Dmod_RequiredModule_t required_modules[MAX_REQUIRED_MODULES];
+    Dmod_RequiredModule_t required_modules[MAX_REQUIRED_MODULES] = {0};
     if( Dmod_ReadRequiredModules(file_path, required_modules, MAX_REQUIRED_MODULES) )
     {
         bool has_requirements = false;
@@ -256,6 +256,9 @@ static int cmd_list(void)
     // Note: This is a hardcoded list of common modules. A more dynamic approach
     // would require directory scanning capabilities or a dedicated DMOD API function
     // to enumerate all available modules in the module repository.
+    // 
+    // Future improvement: Consider moving this to a configuration file or implementing
+    // a DMOD API function like Dmod_EnumerateModules() for dynamic module discovery.
     const char* known_modules[] = {
         "dmell", "cp", "mv", "ls", "cat", "mkdir", "touch",
         "head", "tail", "grep", "rm", "rmdir", "find", "which", "printf", "module"
