@@ -403,6 +403,222 @@ int dmell_handler_default( int argc, char** argv )
 }
 
 /**
+ * @brief Handler for the 'module' command.
+ * 
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_module( int argc, char** argv )
+{
+    if( argc < 2 )
+    {
+        Dmod_Printf("Usage: module <subcommand> [args...]\n");
+        Dmod_Printf("Subcommands:\n");
+        Dmod_Printf("  load <name>      Load a module\n");
+        Dmod_Printf("  unload <name>    Unload a module\n");
+        Dmod_Printf("  enable <name>    Enable a module\n");
+        Dmod_Printf("  disable <name>   Disable a module\n");
+        Dmod_Printf("  info <name>      Show module information\n");
+        Dmod_Printf("  list             List all modules\n");
+        return -EINVAL;
+    }
+
+    const char* subcommand = argv[1];
+
+    if( strcmp( subcommand, "load" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module load <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        Dmod_Context_t* ctx = Dmod_LoadModuleByName( module_name );
+        if( ctx == NULL )
+        {
+            Dmod_Printf("Failed to load module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' loaded successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "unload" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module unload <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        bool result = Dmod_UnloadModule( module_name, false );
+        if( !result )
+        {
+            Dmod_Printf("Failed to unload module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' unloaded successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "enable" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module enable <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        bool result = Dmod_EnableModule( module_name, false, NULL );
+        if( !result )
+        {
+            Dmod_Printf("Failed to enable module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' enabled successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "disable" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module disable <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        bool result = Dmod_DisableModule( module_name, false );
+        if( !result )
+        {
+            Dmod_Printf("Failed to disable module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' disabled successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "info" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module info <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        
+        // Iterate through modules to find the requested one
+        Dmod_ModuleNode_t node;
+        bool found = false;
+        
+        if( Dmod_OpenModules( &node ) )
+        {
+            do
+            {
+                if( node.header.Name[0] != '\0' && strcmp( node.header.Name, module_name ) == 0 )
+                {
+                    found = true;
+                    Dmod_Printf("Module Information:\n");
+                    Dmod_Printf("  Name:     %s\n", node.header.Name);
+                    Dmod_Printf("  Version:  %s\n", node.header.Version);
+                    Dmod_Printf("  Author:   %s\n", node.header.Author);
+                    Dmod_Printf("  Path:     %s\n", node.path);
+                    
+                    // Get module context to check state
+                    Dmod_Context_t* ctx = Dmod_LoadModuleByName( module_name );
+                    if( ctx != NULL )
+                    {
+                        Dmod_Printf("  Size:     %zu bytes\n", ctx->Size);
+                        Dmod_Printf("  Loaded:   %s\n", "yes");
+                        Dmod_Printf("  Enabled:  %s\n", ctx->Enabled ? "yes" : "no");
+                        Dmod_Printf("  Running:  %s\n", ctx->Running ? "yes" : "no");
+                        
+                        // Print required modules
+                        bool has_required = false;
+                        for( int i = 0; i < DMOD_MAX_REQUIRED_MODULES; i++ )
+                        {
+                            if( ctx->RequiredModules[i].Name[0] != '\0' )
+                            {
+                                if( !has_required )
+                                {
+                                    Dmod_Printf("  Required modules:\n");
+                                    has_required = true;
+                                }
+                                Dmod_Printf("    - %s (v%s)%s\n", 
+                                    ctx->RequiredModules[i].Name,
+                                    ctx->RequiredModules[i].Version,
+                                    ctx->RequiredModules[i].SystemModule ? " [system]" : "");
+                            }
+                        }
+                        if( !has_required )
+                        {
+                            Dmod_Printf("  Required modules: none\n");
+                        }
+                    }
+                    else
+                    {
+                        Dmod_Printf("  Loaded:   %s\n", "no");
+                    }
+                    break;
+                }
+            } while( Dmod_ReadNextModule( &node ) );
+            
+            Dmod_CloseModules( &node );
+        }
+        
+        if( !found )
+        {
+            Dmod_Printf("Module not found: %s\n", module_name);
+            return -1;
+        }
+        return 0;
+    }
+    else if( strcmp( subcommand, "list" ) == 0 )
+    {
+        Dmod_ModuleNode_t node;
+        bool has_modules = false;
+        
+        if( Dmod_OpenModules( &node ) )
+        {
+            Dmod_Printf("Available modules:\n");
+            Dmod_Printf("%-20s %-10s %-8s %-8s %-8s\n", "Name", "Version", "Loaded", "Enabled", "Running");
+            Dmod_Printf("--------------------------------------------------------------------------------\n");
+            
+            do
+            {
+                if( node.header.Name[0] != '\0' )
+                {
+                    has_modules = true;
+                    
+                    // Try to get module context to check if it's loaded
+                    Dmod_Context_t* ctx = Dmod_LoadModuleByName( node.header.Name );
+                    bool is_loaded = (ctx != NULL);
+                    bool is_enabled = is_loaded && ctx->Enabled;
+                    bool is_running = is_loaded && ctx->Running;
+                    
+                    Dmod_Printf("%-20s %-10s %-8s %-8s %-8s\n",
+                        node.header.Name,
+                        node.header.Version,
+                        is_loaded ? "yes" : "no",
+                        is_enabled ? "yes" : "no",
+                        is_running ? "yes" : "no");
+                }
+            } while( Dmod_ReadNextModule( &node ) );
+            
+            Dmod_CloseModules( &node );
+        }
+        
+        if( !has_modules )
+        {
+            Dmod_Printf("No modules available\n");
+        }
+        return 0;
+    }
+    else
+    {
+        Dmod_Printf("Unknown subcommand: %s\n", subcommand);
+        Dmod_Printf("Use 'module' without arguments to see available subcommands\n");
+        return -EINVAL;
+    }
+}
+
+/**
  * @brief Registers built-in command handlers.
  * 
  * @return int Exit code
@@ -420,6 +636,7 @@ int dmell_register_handlers( void )
     dmell_register_command_handler( "pwd", dmell_handler_pwd );
     dmell_register_command_handler( "exit", dmell_handler_exit );
     dmell_register_command_handler( "setloglevel", dmell_handler_setloglevel );
+    dmell_register_command_handler( "module", dmell_handler_module );
 
     dmell_set_default_handler( dmell_handler_default );
     return 0;
