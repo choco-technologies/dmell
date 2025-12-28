@@ -4,6 +4,14 @@
 
 The `module` command provides management capabilities for DMOD modules, allowing users to load, unload, enable, disable, and inspect modules in the system.
 
+## Requirements
+
+**Note:** Full functionality of the `module info` command (including displaying required modules) requires DMOD to support the `Dmod_ReadRequiredModules` API function. This function needs to be added to the DMOD API using `DMOD_BUILTIN_API` in `dmod.h`:
+
+```c
+DMOD_BUILTIN_API( Dmod, 1.0, bool, _ReadRequiredModules, (const char* Path, Dmod_RequiredModule_t* outRequiredModules, size_t MaxModules) );
+```
+
 ## Usage
 
 ```
