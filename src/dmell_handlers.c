@@ -504,12 +504,12 @@ int dmell_handler_module( int argc, char** argv )
         const char* module_name = argv[2];
         
         // Iterate through modules to find the requested one
-        Dmod_ModuleNode_t node;
+        Dmod_ModuleNode_t node = {0};
         bool found = false;
         
         if( Dmod_OpenModules( &node ) )
         {
-            do
+            while( Dmod_ReadNextModule( &node ) )
             {
                 if( node.header.Name[0] != '\0' && strcmp( node.header.Name, module_name ) == 0 )
                 {
@@ -520,20 +520,25 @@ int dmell_handler_module( int argc, char** argv )
                     Dmod_Printf("  Author:   %s\n", node.header.Author);
                     Dmod_Printf("  Path:     %s\n", node.path);
                     
-                    // Get module context to check state
-                    Dmod_Context_t* ctx = Dmod_LoadModuleByName( module_name );
-                    if( ctx != NULL )
+                    // Read module header to get more information
+                    Dmod_ModuleHeader_t header;
+                    if( Dmod_ReadModuleHeader( node.path, &header ) )
                     {
-                        Dmod_Printf("  Size:     %zu bytes\n", ctx->Size);
-                        Dmod_Printf("  Loaded:   %s\n", "yes");
-                        Dmod_Printf("  Enabled:  %s\n", ctx->Enabled ? "yes" : "no");
-                        Dmod_Printf("  Running:  %s\n", ctx->Running ? "yes" : "no");
-                        
-                        // Print required modules
+                        Dmod_Printf("  Arch:     %s\n", header.Arch);
+                        Dmod_Printf("  CPU:      %s\n", header.CpuName);
+                        Dmod_Printf("  Priority: %u\n", header.Priority);
+                        Dmod_Printf("  Stack:    %llu bytes\n", (unsigned long long)header.RequiredStackSize);
+                    }
+                    
+                    // Read required modules
+                    Dmod_RequiredModule_t requiredModules[DMOD_MAX_REQUIRED_MODULES] = {0};
+                    
+                    if( Dmod_ReadRequiredModules( node.path, requiredModules, DMOD_MAX_REQUIRED_MODULES ) )
+                    {
                         bool has_required = false;
                         for( int i = 0; i < DMOD_MAX_REQUIRED_MODULES; i++ )
                         {
-                            if( ctx->RequiredModules[i].Name[0] != '\0' )
+                            if( requiredModules[i].Name[0] != '\0' )
                             {
                                 if( !has_required )
                                 {
@@ -541,9 +546,9 @@ int dmell_handler_module( int argc, char** argv )
                                     has_required = true;
                                 }
                                 Dmod_Printf("    - %s (v%s)%s\n", 
-                                    ctx->RequiredModules[i].Name,
-                                    ctx->RequiredModules[i].Version,
-                                    ctx->RequiredModules[i].SystemModule ? " [system]" : "");
+                                    requiredModules[i].Name,
+                                    requiredModules[i].Version,
+                                    requiredModules[i].SystemModule ? " [system]" : "");
                             }
                         }
                         if( !has_required )
@@ -551,13 +556,9 @@ int dmell_handler_module( int argc, char** argv )
                             Dmod_Printf("  Required modules: none\n");
                         }
                     }
-                    else
-                    {
-                        Dmod_Printf("  Loaded:   %s\n", "no");
-                    }
                     break;
                 }
-            } while( Dmod_ReadNextModule( &node ) );
+            }
             
             Dmod_CloseModules( &node );
         }
@@ -571,35 +572,26 @@ int dmell_handler_module( int argc, char** argv )
     }
     else if( strcmp( subcommand, "list" ) == 0 )
     {
-        Dmod_ModuleNode_t node;
+        Dmod_ModuleNode_t node = {0};
         bool has_modules = false;
         
         if( Dmod_OpenModules( &node ) )
         {
             Dmod_Printf("Available modules:\n");
-            Dmod_Printf("%-20s %-10s %-8s %-8s %-8s\n", "Name", "Version", "Loaded", "Enabled", "Running");
-            Dmod_Printf("--------------------------------------------------------------------------------\n");
+            Dmod_Printf("%-30s %-15s %-40s\n", "Name", "Version", "Path");
+            Dmod_Printf("---------------------------------------------------------------------------------------------\n");
             
-            do
+            while( Dmod_ReadNextModule( &node ) )
             {
                 if( node.header.Name[0] != '\0' )
                 {
                     has_modules = true;
-                    
-                    // Try to get module context to check if it's loaded
-                    Dmod_Context_t* ctx = Dmod_LoadModuleByName( node.header.Name );
-                    bool is_loaded = (ctx != NULL);
-                    bool is_enabled = is_loaded && ctx->Enabled;
-                    bool is_running = is_loaded && ctx->Running;
-                    
-                    Dmod_Printf("%-20s %-10s %-8s %-8s %-8s\n",
+                    Dmod_Printf("%-30s %-15s %-40s\n",
                         node.header.Name,
                         node.header.Version,
-                        is_loaded ? "yes" : "no",
-                        is_enabled ? "yes" : "no",
-                        is_running ? "yes" : "no");
+                        node.path);
                 }
-            } while( Dmod_ReadNextModule( &node ) );
+            }
             
             Dmod_CloseModules( &node );
         }

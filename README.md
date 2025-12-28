@@ -24,6 +24,39 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 | `export`| Export a variable |
 | `unset` | Unset a variable |
 | `exit`  | Exit the shell with optional exit code |
+| `module`| Manage DMOD modules (load, unload, enable, disable, info, list) |
+
+### Module Command
+
+The `module` command provides module management functionality:
+
+- `module load <name>` - Load a module by name
+- `module unload <name>` - Unload a loaded module
+- `module enable <name>` - Enable a module
+- `module disable <name>` - Disable a module
+- `module info <name>` - Display detailed information about a module (name, version, author, path, architecture, required modules)
+- `module list` - List all available modules with their names, versions, and paths
+
+Example usage:
+```bash
+# List all available modules
+module list
+
+# Get information about a specific module
+module info dmell
+
+# Load a module
+module load my_module
+
+# Enable a module
+module enable my_module
+
+# Disable a module
+module disable my_module
+
+# Unload a module
+module unload my_module
+```
 
 ## Command Modules
 
