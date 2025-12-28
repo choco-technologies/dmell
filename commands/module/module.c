@@ -3,6 +3,16 @@
 #include <string.h>
 
 /**
+ * @brief Maximum length for module file path
+ */
+#define MODULE_PATH_MAX 512
+
+/**
+ * @brief Maximum number of required modules to read
+ */
+#define MAX_REQUIRED_MODULES 32
+
+/**
  * @brief Print usage information for the module command.
  */
 static void print_usage(void)
@@ -160,7 +170,7 @@ static int cmd_info(const char* module_name)
     }
 
     // Find module file path
-    char file_path[512];
+    char file_path[MODULE_PATH_MAX];
     bool found = Dmod_FindModuleFile(module_name, NULL, file_path, sizeof(file_path));
     
     if( !found )
@@ -202,6 +212,32 @@ static int cmd_info(const char* module_name)
     Dmod_Printf("  Enabled:      %s\n", Dmod_IsModuleEnabled(module_name) ? "Yes" : "No");
     Dmod_Printf("  Used:         %s\n", Dmod_IsModuleUsed(module_name) ? "Yes" : "No");
 
+    // Print required modules information
+    Dmod_Printf("  Required Modules:\n");
+    Dmod_RequiredModule_t required_modules[MAX_REQUIRED_MODULES];
+    if( Dmod_ReadRequiredModules(file_path, required_modules, MAX_REQUIRED_MODULES) )
+    {
+        bool has_requirements = false;
+        for( int i = 0; i < MAX_REQUIRED_MODULES; i++ )
+        {
+            if( required_modules[i].Name[0] != '\0' )
+            {
+                has_requirements = true;
+                Dmod_Printf("    - %s (version %s)\n", 
+                           required_modules[i].Name, 
+                           required_modules[i].Version);
+            }
+        }
+        if( !has_requirements )
+        {
+            Dmod_Printf("    (none)\n");
+        }
+    }
+    else
+    {
+        Dmod_Printf("    (unable to read)\n");
+    }
+
     return 0;
 }
 
@@ -217,7 +253,9 @@ static int cmd_list(void)
     Dmod_Printf("%-20s %-10s %-10s %-10s\n", "----", "------", "-------", "----");
 
     // List of known module names to check
-    // In a real implementation, we would scan the module directory
+    // Note: This is a hardcoded list of common modules. A more dynamic approach
+    // would require directory scanning capabilities or a dedicated DMOD API function
+    // to enumerate all available modules in the module repository.
     const char* known_modules[] = {
         "dmell", "cp", "mv", "ls", "cat", "mkdir", "touch",
         "head", "tail", "grep", "rm", "rmdir", "find", "which", "printf", "module"
@@ -227,7 +265,7 @@ static int cmd_list(void)
     for( int i = 0; i < num_modules; i++ )
     {
         const char* module_name = known_modules[i];
-        char file_path[512];
+        char file_path[MODULE_PATH_MAX];
         
         // Check if module file exists
         if( Dmod_FindModuleFile(module_name, NULL, file_path, sizeof(file_path)) )

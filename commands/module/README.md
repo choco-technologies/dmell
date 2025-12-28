@@ -130,6 +130,8 @@ module list
 module list
 ```
 
+**Note:** The list command currently checks a predefined set of common modules (dmell, cp, mv, ls, cat, mkdir, touch, head, tail, grep, rm, rmdir, find, which, printf, module). Only modules that exist in the DMOD repository will be displayed.
+
 ## Exit Codes
 
 - `0` - Command executed successfully
