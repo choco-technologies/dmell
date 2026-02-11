@@ -1,7 +1,6 @@
 #include <dmod.h>
 #include <errno.h>
 #include <string.h>
-#include <ctype.h>
 
 /**
  * VT100 color codes for syntax highlighting
@@ -13,12 +12,20 @@
 #define VT100_COMMENT   "\033[0;90m"  // Dark Gray for comments
 
 /**
+ * @brief Simple whitespace check (space, tab, CR, LF)
+ */
+static inline int is_whitespace(char c)
+{
+    return (c == ' ' || c == '\t' || c == '\r' || c == '\n');
+}
+
+/**
  * @brief Check if a line is a comment (starts with ; or #)
  */
 static int is_comment_line(const char* line)
 {
     // Skip leading whitespace
-    while (*line && isspace((unsigned char)*line))
+    while (*line && is_whitespace(*line))
         line++;
     
     return (*line == ';' || *line == '#');
@@ -30,7 +37,7 @@ static int is_comment_line(const char* line)
 static int is_section_line(const char* line, const char** section_start, const char** section_end)
 {
     // Skip leading whitespace
-    while (*line && isspace((unsigned char)*line))
+    while (*line && is_whitespace(*line))
         line++;
     
     if (*line != '[')
@@ -59,7 +66,7 @@ static int is_key_value_line(const char* line, const char** key_start, const cha
                              const char** value_start)
 {
     // Skip leading whitespace
-    while (*line && isspace((unsigned char)*line))
+    while (*line && is_whitespace(*line))
         line++;
     
     if (!*line || *line == '\n' || *line == '\r')
