@@ -15,6 +15,7 @@ cp https://github.com/choco-technologies/dmell/releases/download/v<version>/dmel
 mv https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 ls https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 cat https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+catini https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 mkdir https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 touch https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 head https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip

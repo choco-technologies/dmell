@@ -69,6 +69,7 @@ dmf-get cp
 dmf-get mv
 dmf-get ls
 dmf-get cat
+dmf-get catini
 dmf-get mkdir
 dmf-get touch
 dmf-get head
@@ -87,6 +88,7 @@ dmf-get printf
 | `mv`   | Move/rename files | [commands/mv/README.md](commands/mv/README.md) |
 | `ls`   | List directory contents | [commands/ls/README.md](commands/ls/README.md) |
 | `cat`  | Display file contents | [commands/cat/README.md](commands/cat/README.md) |
+| `catini`| Display INI files with syntax highlighting | [commands/catini/README.md](commands/catini/README.md) |
 | `mkdir`| Create directories | [commands/mkdir/README.md](commands/mkdir/README.md) |
 | `touch`| Create empty files / update mtime | [commands/touch/README.md](commands/touch/README.md) |
 | `head` | Display first lines of file | [commands/head/README.md](commands/head/README.md) |
@@ -154,6 +156,7 @@ dmell/
 │   ├── mv/              # Move command module
 │   ├── ls/              # List command module
 │   ├── cat/             # Cat command module
+│   ├── catini/          # INI file viewer with syntax highlighting module
 │   ├── mkdir/           # Create directory module
 │   ├── touch/           # Create empty file module
 │   ├── head/            # Display first lines module
