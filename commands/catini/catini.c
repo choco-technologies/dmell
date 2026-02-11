@@ -215,11 +215,10 @@ int main(int argc, char** argv)
                     print_highlighted_line(line_buffer);
                     line_pos = 0;
                     
-                    // Handle \r\n by skipping the \n if next char is \n
+                    // Handle \r\n by skipping the \n
                     if (c == '\r' && j + 1 < bytes_read && buffer[j + 1] == '\n')
                     {
                         j++;
-                        Dmod_Printf("\n");
                     }
                 }
                 else
