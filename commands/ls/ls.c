@@ -66,7 +66,17 @@ int main( int argc, char** argv )
     void* dir = Dmod_OpenDir(path);
     if( dir == NULL )
     {
-        // If it's not a directory, try to list it as a file
+        // If it's not a directory, check if it's a file by trying to open it
+        void* file = Dmod_FileOpen(path, "r");
+        if( file == NULL )
+        {
+            // Path doesn't exist or cannot be accessed
+            DMOD_LOG_ERROR("Cannot access '%s': No such file or directory\n", path);
+            return -1;
+        }
+        Dmod_FileClose(file);
+        
+        // It's a file, get its name
         const char* filename = get_filename_from_path(path);
         
         // Skip hidden files unless -a flag is used
