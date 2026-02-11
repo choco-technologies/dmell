@@ -3,9 +3,25 @@
 #include <string.h>
 
 /**
+ * @brief Helper function to get the filename from a given path.
+ * 
+ * @param path Full file path
+ * @return const char* Filename extracted from the path
+ */
+static const char* get_filename_from_path(const char* path)
+{
+    const char* last_slash = strrchr(path, '/');
+    if(last_slash != NULL)
+    {
+        return last_slash + 1;
+    }
+    return path;
+}
+
+/**
  * @brief Entry point for the 'ls' command module.
  * 
- * Lists directory contents.
+ * Lists directory contents or file information.
  * Usage: ls [-a] [-l] [path]
  * 
  * @param argc Number of arguments
@@ -50,8 +66,25 @@ int main( int argc, char** argv )
     void* dir = Dmod_OpenDir(path);
     if( dir == NULL )
     {
-        DMOD_LOG_ERROR("Failed to open directory '%s'\n", path);
-        return -1;
+        // If it's not a directory, try to list it as a file
+        const char* filename = get_filename_from_path(path);
+        
+        // Skip hidden files unless -a flag is used
+        if( !show_hidden && filename[0] == '.' )
+        {
+            return 0;
+        }
+        
+        // Print the filename
+        if( long_format )
+        {
+            Dmod_Printf("%-20s\n", filename);
+        }
+        else
+        {
+            Dmod_Printf("%s\n", filename);
+        }
+        return 0;
     }
     
     const char* entry;
