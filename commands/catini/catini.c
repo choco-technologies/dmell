@@ -194,48 +194,12 @@ int main(int argc, char** argv)
             continue;
         }
 
-        char buffer[4096];
-        size_t bytes_read;
-        char line_buffer[4096];
-        int line_pos = 0;
+        // Use minimal buffer for embedded systems (256 bytes)
+        // Lines longer than 255 characters will be truncated
+        char line_buffer[256];
         
-        while ((bytes_read = Dmod_FileRead(buffer, 1, sizeof(buffer) - 1, file)) > 0)
+        while (Dmod_FileReadLine(line_buffer, sizeof(line_buffer), file) != NULL)
         {
-            buffer[bytes_read] = '\0';
-            
-            for (size_t j = 0; j < bytes_read; j++)
-            {
-                char c = buffer[j];
-                
-                if (c == '\n' || c == '\r')
-                {
-                    // End of line - print it with highlighting
-                    line_buffer[line_pos] = c;
-                    line_buffer[line_pos + 1] = '\0';
-                    print_highlighted_line(line_buffer);
-                    line_pos = 0;
-                    
-                    // Handle \r\n by skipping the \n
-                    if (c == '\r' && j + 1 < bytes_read && buffer[j + 1] == '\n')
-                    {
-                        j++;
-                    }
-                }
-                else
-                {
-                    // Add character to line buffer
-                    if (line_pos < sizeof(line_buffer) - 2)
-                    {
-                        line_buffer[line_pos++] = c;
-                    }
-                }
-            }
-        }
-        
-        // Print any remaining content in the line buffer
-        if (line_pos > 0)
-        {
-            line_buffer[line_pos] = '\0';
             print_highlighted_line(line_buffer);
         }
 
