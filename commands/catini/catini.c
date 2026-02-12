@@ -194,6 +194,8 @@ int main(int argc, char** argv)
             continue;
         }
 
+        // Use minimal buffer for embedded systems (256 bytes)
+        // Lines longer than 255 characters will be truncated
         char line_buffer[256];
         
         while (Dmod_FileReadLine(line_buffer, sizeof(line_buffer), file) != NULL)
