@@ -68,7 +68,7 @@ if(NOT DMELL_BUILD_TESTS)
     set(DMOD_AUTHOR_NAME        Patryk Kubiak)
 
     # Stack size for the module (should be integer)
-    set(DMOD_STACK_SIZE         1024)
+    set(DMOD_STACK_SIZE         2048)
 
     #
     #   dmod_add_library - create a library module
