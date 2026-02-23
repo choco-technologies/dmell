@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define IO_BUFFER_SIZE  512
+
 /**
  * @brief Simple pattern matching function for grep.
  * 
@@ -124,6 +126,13 @@ int main( int argc, char** argv )
     int num_files = argc - first_file_index;
     int show_filename = (num_files > 1);
 
+    char* buffer = Dmod_Malloc(IO_BUFFER_SIZE);
+    if( buffer == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed\n");
+        return -ENOMEM;
+    }
+
     for( int i = first_file_index; i < argc; i++ )
     {
         const char* file_path = argv[i];
@@ -135,10 +144,9 @@ int main( int argc, char** argv )
             continue;
         }
 
-        char buffer[4096];
         int line_number = 0;
         
-        while( Dmod_FileReadLine(buffer, sizeof(buffer), file) != NULL )
+        while( Dmod_FileReadLine(buffer, IO_BUFFER_SIZE, file) != NULL )
         {
             line_number++;
             
@@ -173,5 +181,6 @@ int main( int argc, char** argv )
         Dmod_FileClose(file);
     }
 
+    Dmod_Free(buffer);
     return match_found ? 0 : 1;
 }

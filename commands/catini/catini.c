@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define LINE_BUFFER_SIZE    256
+
 /**
  * VT100 color codes for syntax highlighting
  */
@@ -183,6 +185,13 @@ int main(int argc, char** argv)
     }
 
     int result = 0;
+    char* line_buffer = Dmod_Malloc(LINE_BUFFER_SIZE);
+    if (line_buffer == NULL)
+    {
+        DMOD_LOG_ERROR("Memory allocation failed\n");
+        return -ENOMEM;
+    }
+
     for (int i = 1; i < argc; i++)
     {
         const char* file_name = argv[i];
@@ -194,11 +203,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        // Use minimal buffer for embedded systems (256 bytes)
-        // Lines longer than 255 characters will be truncated
-        char line_buffer[256];
-        
-        while (Dmod_FileReadLine(line_buffer, sizeof(line_buffer), file) != NULL)
+        while (Dmod_FileReadLine(line_buffer, LINE_BUFFER_SIZE, file) != NULL)
         {
             print_highlighted_line(line_buffer);
         }
@@ -206,5 +211,6 @@ int main(int argc, char** argv)
         Dmod_FileClose(file);
     }
 
+    Dmod_Free(line_buffer);
     return result;
 }

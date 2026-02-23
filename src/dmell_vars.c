@@ -385,7 +385,7 @@ int dmell_expand_variables( dmell_var_t* head, const char* str, size_t str_len, 
             const char* var_name = get_var_name(var_start, end_ptr, &name_len);
             if(var_name != NULL && name_len > 0 && name_len < DMELL_MAX_VAR_NAME_LEN)
             {
-                char var_name_cpy[ name_len + 1 ];
+                char var_name_cpy[ DMELL_MAX_VAR_NAME_LEN ];
                 strncpy( var_name_cpy, var_name, name_len );
                 var_name_cpy[ name_len ] = '\0';
                 const char* var_value = dmell_get_variable_value(head, var_name_cpy);

@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define IO_BUFFER_SIZE  512
+
 /**
  * @brief Helper function to check if a path is a directory.
  * 
@@ -59,6 +61,8 @@ int main( int argc, char** argv )
     bool alloced_dest_path = false;
     void* src_file = NULL;
     void* dest_file = NULL;
+    char* buffer = NULL;
+    size_t bytes_read;
     int result = 0;
 
     if( source == NULL || destination == NULL )
@@ -98,9 +102,15 @@ int main( int argc, char** argv )
         goto cleanup;
     }
 
-    char buffer[4096];
-    size_t bytes_read;
-    while( (bytes_read = Dmod_FileRead(buffer, 1, sizeof(buffer), src_file)) > 0 )
+    buffer = Dmod_Malloc(IO_BUFFER_SIZE);
+    if( buffer == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in cp command\n");
+        result = -ENOMEM;
+        goto cleanup;
+    }
+
+    while( (bytes_read = Dmod_FileRead(buffer, 1, IO_BUFFER_SIZE, src_file)) > 0 )
     {
         size_t bytes_written = Dmod_FileWrite(buffer, 1, bytes_read, dest_file);
         if( bytes_written < bytes_read )
@@ -112,6 +122,10 @@ int main( int argc, char** argv )
     }
 
 cleanup:
+    if( buffer != NULL )
+    {
+        Dmod_Free(buffer);
+    }
     if( src_file != NULL )
     {
         Dmod_FileClose(src_file);

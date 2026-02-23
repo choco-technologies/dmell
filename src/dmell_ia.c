@@ -59,9 +59,16 @@ static void print_prompt()
 {
     const char* host_name = Dmod_GetEnv( "HOSTNAME" );
     host_name = ( host_name != NULL ) ? host_name : "dmell";
-    char cwd[256] = {0};
-    Dmod_GetCwd( cwd, sizeof(cwd) );
+    char* cwd = Dmod_Malloc( 256 );
+    if( cwd == NULL )
+    {
+        Dmod_Printf("\033[35;1m%s\033[0m> ", host_name);
+        return;
+    }
+    cwd[0] = '\0';
+    Dmod_GetCwd( cwd, 256 );
     Dmod_Printf("\033[35;1m%s\033[37;1m@\033[34;1m%s\033[0m> ", host_name, cwd);
+    Dmod_Free( cwd );
 }
 
 /**
@@ -99,7 +106,12 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         }
     }
 
-    char search_dir[256] = {0};
+    char* search_dir = Dmod_Malloc( 256 );
+    if( search_dir == NULL )
+    {
+        return false;
+    }
+    search_dir[0] = '\0';
     const char* partial_filename;
     size_t partial_filename_len;
     
@@ -107,8 +119,9 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
     {
         // Path contains a slash - extract directory and filename parts
         size_t dir_len = last_slash - partial_name + 1; // Include the slash
-        if( dir_len + 1 > sizeof(search_dir) )
+        if( dir_len + 1 > 256 )
         {
+            Dmod_Free( search_dir );
             return false; // Directory path too long (need space for null terminator)
         }
         
@@ -132,12 +145,13 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
     else
     {
         // No slash - search in current directory
-        Dmod_GetCwd(search_dir, sizeof(search_dir));
+        Dmod_GetCwd(search_dir, 256);
         partial_filename = partial_name;
         partial_filename_len = partial_len;
     }
     
     void* dir = Dmod_OpenDir(search_dir);
+    Dmod_Free( search_dir );
     if( dir == NULL )
     {
         return false;
@@ -229,7 +243,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     }
 
     char partial_word[MAX_COMPLETION_WORD_LEN];
-    if( word_len >= sizeof(partial_word) )
+    if( word_len >= MAX_COMPLETION_WORD_LEN )
     {
         return position; // Word too long
     }
@@ -237,7 +251,12 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     strncpy(partial_word, buffer + word_start, word_len);
     partial_word[word_len] = '\0';
 
-    char match[MAX_COMPLETION_WORD_LEN] = {0};
+    char* match = Dmod_Malloc( MAX_COMPLETION_WORD_LEN );
+    if( match == NULL )
+    {
+        return position;
+    }
+    match[0] = '\0';
     bool found = false;
     
     // Determine if we're completing the first word (command) or subsequent words (arguments)
@@ -255,18 +274,18 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     if( is_first_word )
     {
         // For the first word, prioritize built-in commands, then modules
-        found = find_builtin_command_match(partial_word, match, sizeof(match));
+        found = find_builtin_command_match(partial_word, match, MAX_COMPLETION_WORD_LEN);
         
         if( !found )
         {
-            found = Dmod_FindMatch(partial_word, match, sizeof(match));
+            found = Dmod_FindMatch(partial_word, match, MAX_COMPLETION_WORD_LEN);
         }
     }
     
     // For subsequent words or if no command match found, try file completion
     if( !found )
     {
-        found = find_file_match(partial_word, match, sizeof(match));
+        found = find_file_match(partial_word, match, MAX_COMPLETION_WORD_LEN);
     }
 
     if( found )
@@ -276,6 +295,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
         // Verify that the match is actually longer than our partial word
         if( match_len <= word_len )
         {
+            Dmod_Free( match );
             return position;
         }
         
@@ -284,6 +304,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
         // Check if there's enough space in the buffer
         if( position + completion_len >= buffer_size )
         {
+            Dmod_Free( match );
             return position;
         }
 
@@ -299,6 +320,7 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
         }
     }
 
+    Dmod_Free( match );
     return position;
 }
 

@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define IO_BUFFER_SIZE  512
+
 /**
  * @brief Simple string to integer conversion.
  * 
@@ -103,12 +105,18 @@ int main( int argc, char** argv )
         return -1;
     }
 
-    char buffer[4096];
+    char* buffer = Dmod_Malloc(IO_BUFFER_SIZE);
+    if( buffer == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed\n");
+        Dmod_FileClose(file);
+        return -ENOMEM;
+    }
     int lines_printed = 0;
     
     while( lines_printed < num_lines )
     {
-        char* line = Dmod_FileReadLine(buffer, sizeof(buffer), file);
+        char* line = Dmod_FileReadLine(buffer, IO_BUFFER_SIZE, file);
         if( line == NULL )
         {
             break;  // End of file
@@ -120,6 +128,7 @@ int main( int argc, char** argv )
         lines_printed++;
     }
 
+    Dmod_Free(buffer);
     Dmod_FileClose(file);
     return 0;
 }
