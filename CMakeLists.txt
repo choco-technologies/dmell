@@ -104,6 +104,8 @@ if(NOT DMELL_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
+    target_link_libraries(${DMOD_MODULE_NAME} dmosi_if)
+
     # ======================================================================
     #               Command Modules
     # ======================================================================

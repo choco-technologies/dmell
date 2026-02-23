@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <dmod.h>
+#include <dmosi.h>
 #include "dmell_handlers.h"
 #include "dmell.h"
 
@@ -401,6 +402,43 @@ static int run_shebang( char* interpreter, char* script_file, int argc, char** a
 }
 
 /**
+ * @brief Helper function to spawn a module and wait for its completion.
+ *
+ * Falls back to Dmod_SpawnModule when Dmod_RunModule fails with -ENOMEM,
+ * then waits for the spawned process to finish using the dmosi process API.
+ *
+ * @param file_name Path or name of the module to spawn
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code of the spawned process, or negative error code on failure
+ */
+static int spawn_and_wait( const char* file_name, int argc, char** argv )
+{
+    if( !Dmod_IsFunctionConnected( (void*)Dmod_SpawnModule ) )
+    {
+        DMOD_LOG_ERROR("Dmod_SpawnModule is not available and Dmod_RunModule failed with -ENOMEM\n");
+        return -ENOMEM;
+    }
+
+    int pid = Dmod_SpawnModule( file_name, argc, argv );
+    if( pid < 0 )
+    {
+        return pid;
+    }
+
+    dmosi_process_t proc = dmosi_process_find_by_id( (dmosi_process_id_t)pid );
+    if( proc == NULL )
+    {
+        return -ESRCH;
+    }
+
+    dmosi_process_wait( proc, -1 );
+    int exit_status = dmosi_process_get_exit_status( proc );
+    dmosi_process_destroy( proc );
+    return exit_status;
+}
+
+/**
  * @brief Default handler for unknown commands.
  * 
  * @param argc Number of arguments
@@ -424,6 +462,7 @@ int dmell_handler_default( int argc, char** argv )
     {
         // check if it is a file execution
         char* file_name = argv[0];
+        int result;
         if(Dmod_FileAvailable(file_name))
         {
             char interpreter[256] = {0};
@@ -437,13 +476,20 @@ int dmell_handler_default( int argc, char** argv )
             }
             else
             {
-                return Dmod_RunModule( file_name, argc, argv );
+                result = Dmod_RunModule( file_name, argc, argv );
             }
         }
         else 
         {
-            return Dmod_RunModule( file_name, argc, argv );
+            result = Dmod_RunModule( file_name, argc, argv );
         }
+
+        if( result == -ENOMEM )
+        {
+            result = spawn_and_wait( file_name, argc, argv );
+        }
+
+        return result;
     }
 }
 
