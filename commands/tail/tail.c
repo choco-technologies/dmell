@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define IO_BUFFER_SIZE  512
+
 /**
  * @brief Simple string to integer conversion.
  * 
@@ -104,7 +106,7 @@ int main( int argc, char** argv )
     }
 
     // First, count total lines in file
-    char* buffer = Dmod_Malloc(4096);
+    char* buffer = Dmod_Malloc(IO_BUFFER_SIZE);
     if( buffer == NULL )
     {
         DMOD_LOG_ERROR("Memory allocation failed\n");
@@ -114,7 +116,7 @@ int main( int argc, char** argv )
     int total_lines = 0;
     int last_line_had_newline = 1;
     
-    while( Dmod_FileReadLine(buffer, 4096, file) != NULL )
+    while( Dmod_FileReadLine(buffer, IO_BUFFER_SIZE, file) != NULL )
     {
         size_t len = strlen(buffer);
         if( len > 0 )
@@ -151,7 +153,7 @@ int main( int argc, char** argv )
     int current_line = 0;
     while( current_line < start_line )
     {
-        char* line = Dmod_FileReadLine(buffer, 4096, file);
+        char* line = Dmod_FileReadLine(buffer, IO_BUFFER_SIZE, file);
         if( line == NULL )
         {
             break;
@@ -161,7 +163,7 @@ int main( int argc, char** argv )
     }
 
     // Print remaining lines
-    while( Dmod_FileReadLine(buffer, 4096, file) != NULL )
+    while( Dmod_FileReadLine(buffer, IO_BUFFER_SIZE, file) != NULL )
     {
         Dmod_Printf("%s", buffer);
     }

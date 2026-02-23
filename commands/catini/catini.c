@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define LINE_BUFFER_SIZE    256
+
 /**
  * VT100 color codes for syntax highlighting
  */
@@ -183,7 +185,7 @@ int main(int argc, char** argv)
     }
 
     int result = 0;
-    char* line_buffer = Dmod_Malloc(256);
+    char* line_buffer = Dmod_Malloc(LINE_BUFFER_SIZE);
     if (line_buffer == NULL)
     {
         DMOD_LOG_ERROR("Memory allocation failed\n");
@@ -201,7 +203,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        while (Dmod_FileReadLine(line_buffer, 256, file) != NULL)
+        while (Dmod_FileReadLine(line_buffer, LINE_BUFFER_SIZE, file) != NULL)
         {
             print_highlighted_line(line_buffer);
         }

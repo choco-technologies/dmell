@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define IO_BUFFER_SIZE  512
+
 /**
  * @brief Entry point for the 'cat' command module.
  * 
@@ -32,7 +34,7 @@ int main( int argc, char** argv )
             continue;
         }
 
-        char* buffer = Dmod_Malloc(4096);
+        char* buffer = Dmod_Malloc(IO_BUFFER_SIZE);
         if( buffer == NULL )
         {
             DMOD_LOG_ERROR("Memory allocation failed\n");
@@ -41,7 +43,7 @@ int main( int argc, char** argv )
         }
 
         size_t bytes_read;
-        while( (bytes_read = Dmod_FileRead(buffer, 1, 4095, file)) > 0 )
+        while( (bytes_read = Dmod_FileRead(buffer, 1, IO_BUFFER_SIZE - 1, file)) > 0 )
         {
             buffer[bytes_read] = '\0';
             Dmod_Printf("%s", buffer);
