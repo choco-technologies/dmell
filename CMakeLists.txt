@@ -38,6 +38,19 @@ set(DMOD_ENABLE_MEMORY_ANALYSIS OFF CACHE BOOL "Enable memory analysis during bu
 
 FetchContent_MakeAvailable(dmod)
 
+# Set DMOD_DIR early so dmosi's CMakeLists.txt can find paths.cmake
+set(DMOD_DIR ${dmod_SOURCE_DIR} CACHE PATH "DMOD source directory")
+
+# ======================================================================
+#               Fetch DMOSI
+# ======================================================================
+FetchContent_Declare(
+    dmosi
+    GIT_REPOSITORY https://github.com/choco-technologies/dmosi.git
+    GIT_TAG        2920b2e05db51e6fffc9e2d54cae3dd6cfc8348b
+)
+FetchContent_MakeAvailable(dmosi)
+
 project(dmell
     VERSION ${DMOD_MODULE_VERSION}
     DESCRIPTION "DMOD Shell"
@@ -110,6 +123,7 @@ if(NOT DMELL_BUILD_TESTS)
     add_subdirectory(commands/find)
     add_subdirectory(commands/which)
     add_subdirectory(commands/printf)
+    add_subdirectory(commands/ps)
 endif()
 
 # ======================================================================
