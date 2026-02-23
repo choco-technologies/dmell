@@ -38,6 +38,19 @@ set(DMOD_ENABLE_MEMORY_ANALYSIS OFF CACHE BOOL "Enable memory analysis during bu
 
 FetchContent_MakeAvailable(dmod)
 
+# ======================================================================
+#               Fetch DMOSI (headers only – not built as a library here)
+# ======================================================================
+FetchContent_Declare(
+    dmosi
+    GIT_REPOSITORY https://github.com/choco-technologies/dmosi.git
+    GIT_TAG        a022537b87faac1c3a67c228c2baffb3dae4839d
+)
+FetchContent_GetProperties(dmosi)
+if(NOT dmosi_POPULATED)
+    FetchContent_Populate(dmosi)
+endif()
+
 project(dmell
     VERSION ${DMOD_MODULE_VERSION}
     DESCRIPTION "DMOD Shell"
@@ -110,6 +123,7 @@ if(NOT DMELL_BUILD_TESTS)
     add_subdirectory(commands/find)
     add_subdirectory(commands/which)
     add_subdirectory(commands/printf)
+    add_subdirectory(commands/ps)
 endif()
 
 # ======================================================================
