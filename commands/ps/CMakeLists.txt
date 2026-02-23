@@ -14,5 +14,5 @@ dmod_add_executable(${PS_MODULE_NAME} ${DMOD_MODULE_VERSION}
     ps.c
 )
 
-# Link against dmosi to get its include directories and API declarations
-target_link_libraries(${PS_MODULE_NAME} PRIVATE dmosi)
+# Link against dmosi_if to get its include directories and API declarations
+target_link_libraries(${PS_MODULE_NAME} PRIVATE dmosi_if)
