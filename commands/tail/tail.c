@@ -104,11 +104,17 @@ int main( int argc, char** argv )
     }
 
     // First, count total lines in file
-    char buffer[4096];
+    char* buffer = Dmod_Malloc(4096);
+    if( buffer == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed\n");
+        Dmod_FileClose(file);
+        return -ENOMEM;
+    }
     int total_lines = 0;
     int last_line_had_newline = 1;
     
-    while( Dmod_FileReadLine(buffer, sizeof(buffer), file) != NULL )
+    while( Dmod_FileReadLine(buffer, 4096, file) != NULL )
     {
         size_t len = strlen(buffer);
         if( len > 0 )
@@ -145,7 +151,7 @@ int main( int argc, char** argv )
     int current_line = 0;
     while( current_line < start_line )
     {
-        char* line = Dmod_FileReadLine(buffer, sizeof(buffer), file);
+        char* line = Dmod_FileReadLine(buffer, 4096, file);
         if( line == NULL )
         {
             break;
@@ -155,11 +161,12 @@ int main( int argc, char** argv )
     }
 
     // Print remaining lines
-    while( Dmod_FileReadLine(buffer, sizeof(buffer), file) != NULL )
+    while( Dmod_FileReadLine(buffer, 4096, file) != NULL )
     {
         Dmod_Printf("%s", buffer);
     }
 
+    Dmod_Free(buffer);
     Dmod_FileClose(file);
     return 0;
 }

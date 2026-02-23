@@ -32,14 +32,22 @@ int main( int argc, char** argv )
             continue;
         }
 
-        char buffer[4096];
+        char* buffer = Dmod_Malloc(4096);
+        if( buffer == NULL )
+        {
+            DMOD_LOG_ERROR("Memory allocation failed\n");
+            Dmod_FileClose(file);
+            return -ENOMEM;
+        }
+
         size_t bytes_read;
-        while( (bytes_read = Dmod_FileRead(buffer, 1, sizeof(buffer) - 1, file)) > 0 )
+        while( (bytes_read = Dmod_FileRead(buffer, 1, 4095, file)) > 0 )
         {
             buffer[bytes_read] = '\0';
             Dmod_Printf("%s", buffer);
         }
 
+        Dmod_Free(buffer);
         Dmod_FileClose(file);
     }
 
