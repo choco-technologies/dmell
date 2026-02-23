@@ -232,6 +232,51 @@ int dmell_handler_exit( int argc, char** argv )
 }
 
 /**
+ * @brief Handler for the 'uptime' command.
+ * 
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_uptime( int argc, char** argv )
+{
+    (void)argc;
+    (void)argv;
+
+    Dmod_Timestamp_t uptime_ms = Dmod_GetUptime();
+
+    uint64_t total_seconds = uptime_ms / 1000;
+    uint64_t ms            = uptime_ms % 1000;
+    uint64_t seconds       = total_seconds % 60;
+    uint64_t total_minutes = total_seconds / 60;
+    uint64_t minutes       = total_minutes % 60;
+    uint64_t total_hours   = total_minutes / 60;
+    uint64_t hours         = total_hours % 24;
+    uint64_t days          = total_hours / 24;
+
+    if( days > 0 )
+    {
+        Dmod_Printf("up %llu day%s, %02llu:%02llu:%02llu.%03llu\n",
+            (unsigned long long)days,
+            days == 1 ? "" : "s",
+            (unsigned long long)hours,
+            (unsigned long long)minutes,
+            (unsigned long long)seconds,
+            (unsigned long long)ms);
+    }
+    else
+    {
+        Dmod_Printf("up %02llu:%02llu:%02llu.%03llu\n",
+            (unsigned long long)hours,
+            (unsigned long long)minutes,
+            (unsigned long long)seconds,
+            (unsigned long long)ms);
+    }
+
+    return 0;
+}
+
+/**
  * @brief Handler for the 'setloglevel' command.
  * 
  * @param argc Number of arguments
@@ -625,6 +670,7 @@ int dmell_register_handlers( void )
     dmell_register_command_handler( "exit", dmell_handler_exit );
     dmell_register_command_handler( "setloglevel", dmell_handler_setloglevel );
     dmell_register_command_handler( "module", dmell_handler_module );
+    dmell_register_command_handler( "uptime", dmell_handler_uptime );
 
     dmell_set_default_handler( dmell_handler_default );
     return 0;
