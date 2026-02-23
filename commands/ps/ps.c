@@ -108,8 +108,8 @@ int main( int argc, char** argv )
     /* Print table header */
     Dmod_Printf( "%-6s %-20s %-16s %-10s\n",
                  "PID", "PROCESS", "MODULE", "STATE" );
-    Dmod_Printf( "  %-22s %-10s %6s  %s\n",
-                 "THREAD", "STATE", "CPU%", "STACK(cur/tot)" );
+    Dmod_Printf( "  %-22s %-10s %6s\n",
+                 "THREAD", "STATE", "CPU%" );
 
     /* Print each process followed by its threads */
     for( size_t i = 0; i < proc_count; i++ )
@@ -139,12 +139,10 @@ int main( int argc, char** argv )
 
             if( ret == 0 )
             {
-                Dmod_Printf( "  %-22s %-10s %5.1f%%  %zu/%zu\n",
+                Dmod_Printf( "  %-22s %-10s %5.1f%%\n",
                              thread_name ? thread_name : "(unknown)",
                              thread_state_str( info.state ),
-                             info.cpu_usage,
-                             info.stack_current,
-                             info.stack_total );
+                             info.cpu_usage );
             }
             else
             {

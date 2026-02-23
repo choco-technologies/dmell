@@ -14,12 +14,12 @@ ps
 
 ```
 PID    PROCESS              MODULE           STATE
-  THREAD                 STATE      CPU%   STACK(cur/tot)
+  THREAD                 STATE      CPU%
 1      main               dmell            RUNNING
-  [main_thread]          RUNNING    5.2%   256/2048
-  [io_thread]            BLOCKED    0.1%   128/1024
+  [main_thread]          RUNNING    5.2%
+  [io_thread]            BLOCKED    0.1%
 2      sensor             sensor_mod       RUNNING
-  [sensor_reader]        RUNNING    1.0%   128/1024
+  [sensor_reader]        RUNNING    1.0%
 ```
 
 ### Columns
@@ -31,10 +31,9 @@ PID    PROCESS              MODULE           STATE
 - `STATE`   - Process state (`CREATED`, `RUNNING`, `SUSPENDED`, `TERMINATED`, `ZOMBIE`)
 
 **Thread line (indented):**
-- `THREAD`         - Thread name
-- `STATE`          - Thread state (`CREATED`, `READY`, `RUNNING`, `BLOCKED`, `SUSPENDED`, `TERMINATED`)
-- `CPU%`           - CPU usage as a percentage
-- `STACK(cur/tot)` - Current and total stack usage in bytes
+- `THREAD` - Thread name
+- `STATE`  - Thread state (`CREATED`, `READY`, `RUNNING`, `BLOCKED`, `SUSPENDED`, `TERMINATED`)
+- `CPU%`   - CPU usage as a percentage
 
 ## Exit Codes
 

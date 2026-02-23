@@ -51,6 +51,12 @@ if(NOT dmosi_POPULATED)
     FetchContent_Populate(dmosi)
 endif()
 
+# Create an interface target so command modules can link against dmosi
+if(NOT TARGET dmosi)
+    add_library(dmosi INTERFACE)
+    target_include_directories(dmosi INTERFACE ${dmosi_SOURCE_DIR}/include)
+endif()
+
 project(dmell
     VERSION ${DMOD_MODULE_VERSION}
     DESCRIPTION "DMOD Shell"
