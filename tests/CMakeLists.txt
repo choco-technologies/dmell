@@ -28,6 +28,7 @@ set(TEST_SOURCES
 set(DMELL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/dmell_vars.c
     ${CMAKE_SOURCE_DIR}/src/dmell_cmd.c
+    ${CMAKE_SOURCE_DIR}/src/dmell_io.c
     ${CMAKE_SOURCE_DIR}/src/dmell_line.c
 )
 

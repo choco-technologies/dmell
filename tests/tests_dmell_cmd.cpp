@@ -526,3 +526,100 @@ TEST_F(DmellCmdRunStringTest, RunEmptyCommandString)
     
     EXPECT_LT(result, 0);
 }
+
+// ===============================================================
+//                  Output Redirect Parsing Tests
+// ===============================================================
+
+class DmellCmdRedirectTest : public ::testing::Test
+{
+protected:
+    dmell_argv_t parsed_argv;
+
+    void SetUp() override
+    {
+        memset(&parsed_argv, 0, sizeof(parsed_argv));
+    }
+
+    void TearDown() override
+    {
+        for (int i = 0; i < parsed_argv.argc; i++)
+        {
+            if (parsed_argv.argv != nullptr && parsed_argv.argv[i] != nullptr)
+            {
+                Dmod_Free(parsed_argv.argv[i]);
+            }
+        }
+        if (parsed_argv.argv != nullptr)
+        {
+            Dmod_Free(parsed_argv.argv);
+        }
+        if (parsed_argv.stdout_redirect != nullptr)
+        {
+            Dmod_Free(parsed_argv.stdout_redirect);
+        }
+    }
+};
+
+/**
+ * @brief Test that '>' separates into redirect target (space-separated form)
+ */
+TEST_F(DmellCmdRedirectTest, ParseRedirectSpaceSeparated)
+{
+    const char* cmd = "echo hello > /some/file";
+
+    int result = dmell_parse_command(cmd, strlen(cmd), &parsed_argv);
+
+    EXPECT_EQ(result, 0);
+    /* 'echo' and 'hello' should remain; '>' and '/some/file' removed */
+    EXPECT_EQ(parsed_argv.argc, 2);
+    ASSERT_NE(parsed_argv.argv, nullptr);
+    EXPECT_STREQ(parsed_argv.argv[0], "echo");
+    EXPECT_STREQ(parsed_argv.argv[1], "hello");
+    /* redirect target captured */
+    ASSERT_NE(parsed_argv.stdout_redirect, nullptr);
+    EXPECT_STREQ(parsed_argv.stdout_redirect, "/some/file");
+}
+
+/**
+ * @brief Test that '>file' (no space) is parsed correctly
+ */
+TEST_F(DmellCmdRedirectTest, ParseRedirectAttached)
+{
+    const char* cmd = "echo hello >/some/file";
+
+    int result = dmell_parse_command(cmd, strlen(cmd), &parsed_argv);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(parsed_argv.argc, 2);
+    EXPECT_STREQ(parsed_argv.argv[0], "echo");
+    EXPECT_STREQ(parsed_argv.argv[1], "hello");
+    ASSERT_NE(parsed_argv.stdout_redirect, nullptr);
+    EXPECT_STREQ(parsed_argv.stdout_redirect, "/some/file");
+}
+
+/**
+ * @brief Test that a bare '>' with no following filename returns an error
+ */
+TEST_F(DmellCmdRedirectTest, ParseRedirectMissingTarget)
+{
+    const char* cmd = "echo hello >";
+
+    int result = dmell_parse_command(cmd, strlen(cmd), &parsed_argv);
+
+    EXPECT_LT(result, 0);
+}
+
+/**
+ * @brief Test that a command with no redirect leaves stdout_redirect NULL
+ */
+TEST_F(DmellCmdRedirectTest, ParseNoRedirect)
+{
+    const char* cmd = "echo hello world";
+
+    int result = dmell_parse_command(cmd, strlen(cmd), &parsed_argv);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(parsed_argv.argc, 3);
+    EXPECT_EQ(parsed_argv.stdout_redirect, nullptr);
+}

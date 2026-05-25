@@ -5,6 +5,7 @@
 #include <dmod.h>
 #include <dmosi.h>
 #include "dmell_handlers.h"
+#include "dmell_io.h"
 #include "dmell.h"
 
 /**
@@ -18,13 +19,13 @@ int dmell_handler_echo( int argc, char** argv )
 {
     for( int i = 1; i < argc; i++ )
     {
-        Dmod_Printf("%s", argv[i]);
+        dmell_printf("%s", argv[i]);
         if( i < argc - 1 )
         {
-            Dmod_Printf(" ");
+            dmell_printf(" ");
         }
     }
-    Dmod_Printf("\n");
+    dmell_printf("\n");
     return 0;
 }
 
@@ -183,7 +184,7 @@ int dmell_handler_pwd( int argc, char** argv )
         return -1;
     }
     
-    Dmod_Printf("%s\n", cwd);
+    dmell_printf("%s\n", cwd);
     return 0;
 }
 
@@ -257,7 +258,7 @@ int dmell_handler_uptime( int argc, char** argv )
 
     if( days > 0 )
     {
-        Dmod_Printf("up %llu day%s, %02llu:%02llu:%02llu.%03llu\n",
+        dmell_printf("up %llu day%s, %02llu:%02llu:%02llu.%03llu\n",
             (unsigned long long)days,
             days == 1 ? "" : "s",
             (unsigned long long)hours,
@@ -267,7 +268,7 @@ int dmell_handler_uptime( int argc, char** argv )
     }
     else
     {
-        Dmod_Printf("up %02llu:%02llu:%02llu.%03llu\n",
+        dmell_printf("up %02llu:%02llu:%02llu.%03llu\n",
             (unsigned long long)hours,
             (unsigned long long)minutes,
             (unsigned long long)seconds,
@@ -504,14 +505,14 @@ int dmell_handler_module( int argc, char** argv )
 {
     if( argc < 2 )
     {
-        Dmod_Printf("Usage: module <subcommand> [args...]\n");
-        Dmod_Printf("Subcommands:\n");
-        Dmod_Printf("  load <name>      Load a module\n");
-        Dmod_Printf("  unload <name>    Unload a module\n");
-        Dmod_Printf("  enable <name>    Enable a module\n");
-        Dmod_Printf("  disable <name>   Disable a module\n");
-        Dmod_Printf("  info <name>      Show module information\n");
-        Dmod_Printf("  list             List all modules\n");
+        dmell_printf("Usage: module <subcommand> [args...]\n");
+        dmell_printf("Subcommands:\n");
+        dmell_printf("  load <name>      Load a module\n");
+        dmell_printf("  unload <name>    Unload a module\n");
+        dmell_printf("  enable <name>    Enable a module\n");
+        dmell_printf("  disable <name>   Disable a module\n");
+        dmell_printf("  info <name>      Show module information\n");
+        dmell_printf("  list             List all modules\n");
         return -EINVAL;
     }
 
@@ -521,75 +522,75 @@ int dmell_handler_module( int argc, char** argv )
     {
         if( argc < 3 )
         {
-            Dmod_Printf("Usage: module load <name>\n");
+            dmell_printf("Usage: module load <name>\n");
             return -EINVAL;
         }
         const char* module_name = argv[2];
         Dmod_Context_t* ctx = Dmod_LoadModuleByName( module_name );
         if( ctx == NULL )
         {
-            Dmod_Printf("Failed to load module: %s\n", module_name);
+            dmell_printf("Failed to load module: %s\n", module_name);
             return -1;
         }
-        Dmod_Printf("Module '%s' loaded successfully\n", module_name);
+        dmell_printf("Module '%s' loaded successfully\n", module_name);
         return 0;
     }
     else if( strcmp( subcommand, "unload" ) == 0 )
     {
         if( argc < 3 )
         {
-            Dmod_Printf("Usage: module unload <name>\n");
+            dmell_printf("Usage: module unload <name>\n");
             return -EINVAL;
         }
         const char* module_name = argv[2];
         bool result = Dmod_UnloadModule( module_name, false );
         if( !result )
         {
-            Dmod_Printf("Failed to unload module: %s\n", module_name);
+            dmell_printf("Failed to unload module: %s\n", module_name);
             return -1;
         }
-        Dmod_Printf("Module '%s' unloaded successfully\n", module_name);
+        dmell_printf("Module '%s' unloaded successfully\n", module_name);
         return 0;
     }
     else if( strcmp( subcommand, "enable" ) == 0 )
     {
         if( argc < 3 )
         {
-            Dmod_Printf("Usage: module enable <name>\n");
+            dmell_printf("Usage: module enable <name>\n");
             return -EINVAL;
         }
         const char* module_name = argv[2];
         bool result = Dmod_EnableModule( module_name, false, NULL );
         if( !result )
         {
-            Dmod_Printf("Failed to enable module: %s\n", module_name);
+            dmell_printf("Failed to enable module: %s\n", module_name);
             return -1;
         }
-        Dmod_Printf("Module '%s' enabled successfully\n", module_name);
+        dmell_printf("Module '%s' enabled successfully\n", module_name);
         return 0;
     }
     else if( strcmp( subcommand, "disable" ) == 0 )
     {
         if( argc < 3 )
         {
-            Dmod_Printf("Usage: module disable <name>\n");
+            dmell_printf("Usage: module disable <name>\n");
             return -EINVAL;
         }
         const char* module_name = argv[2];
         bool result = Dmod_DisableModule( module_name, false );
         if( !result )
         {
-            Dmod_Printf("Failed to disable module: %s\n", module_name);
+            dmell_printf("Failed to disable module: %s\n", module_name);
             return -1;
         }
-        Dmod_Printf("Module '%s' disabled successfully\n", module_name);
+        dmell_printf("Module '%s' disabled successfully\n", module_name);
         return 0;
     }
     else if( strcmp( subcommand, "info" ) == 0 )
     {
         if( argc < 3 )
         {
-            Dmod_Printf("Usage: module info <name>\n");
+            dmell_printf("Usage: module info <name>\n");
             return -EINVAL;
         }
         const char* module_name = argv[2];
@@ -605,17 +606,17 @@ int dmell_handler_module( int argc, char** argv )
                 if( node.header.Name[0] != '\0' && strcmp( node.header.Name, module_name ) == 0 )
                 {
                     found = true;
-                    Dmod_Printf("Module Information:\n");
-                    Dmod_Printf("  Name:     %s\n", node.header.Name);
-                    Dmod_Printf("  Version:  %s\n", node.header.Version);
-                    Dmod_Printf("  Author:   %s\n", node.header.Author);
-                    Dmod_Printf("  Path:     %s\n", node.path);
+                    dmell_printf("Module Information:\n");
+                    dmell_printf("  Name:     %s\n", node.header.Name);
+                    dmell_printf("  Version:  %s\n", node.header.Version);
+                    dmell_printf("  Author:   %s\n", node.header.Author);
+                    dmell_printf("  Path:     %s\n", node.path);
                     
                     // Read module header to get more information
-                    Dmod_Printf("  Arch:     %s\n", node.header.Arch);
-                    Dmod_Printf("  CPU:      %s\n", node.header.CpuName);
-                    Dmod_Printf("  Priority: %u\n", node.header.Priority);
-                    Dmod_Printf("  Stack:    %llu bytes\n", (unsigned long long)node.header.RequiredStackSize);
+                    dmell_printf("  Arch:     %s\n", node.header.Arch);
+                    dmell_printf("  CPU:      %s\n", node.header.CpuName);
+                    dmell_printf("  Priority: %u\n", node.header.Priority);
+                    dmell_printf("  Stack:    %llu bytes\n", (unsigned long long)node.header.RequiredStackSize);
                     
                     // Read required modules
                     Dmod_RequiredModule_t requiredModules[DMOD_MAX_REQUIRED_MODULES] = {0};
@@ -629,10 +630,10 @@ int dmell_handler_module( int argc, char** argv )
                             {
                                 if( !has_required )
                                 {
-                                    Dmod_Printf("  Required modules:\n");
+                                    dmell_printf("  Required modules:\n");
                                     has_required = true;
                                 }
-                                Dmod_Printf("    - %s (v%s)%s\n", 
+                                dmell_printf("    - %s (v%s)%s\n", 
                                     requiredModules[i].Name,
                                     requiredModules[i].Version,
                                     requiredModules[i].SystemModule ? " [system]" : "");
@@ -640,7 +641,7 @@ int dmell_handler_module( int argc, char** argv )
                         }
                         if( !has_required )
                         {
-                            Dmod_Printf("  Required modules: none\n");
+                            dmell_printf("  Required modules: none\n");
                         }
                     }
                     break;
@@ -652,7 +653,7 @@ int dmell_handler_module( int argc, char** argv )
         
         if( !found )
         {
-            Dmod_Printf("Module not found: %s\n", module_name);
+            dmell_printf("Module not found: %s\n", module_name);
             return -1;
         }
         return 0;
@@ -664,16 +665,16 @@ int dmell_handler_module( int argc, char** argv )
         
         if( Dmod_OpenModules( &node ) )
         {
-            Dmod_Printf("Available modules:\n");
-            Dmod_Printf("%-30s %-15s %-40s\n", "Name", "Version", "Path");
-            Dmod_Printf("---------------------------------------------------------------------------------------------\n");
+            dmell_printf("Available modules:\n");
+            dmell_printf("%-30s %-15s %-40s\n", "Name", "Version", "Path");
+            dmell_printf("---------------------------------------------------------------------------------------------\n");
             
             while( Dmod_ReadNextModule( &node ) )
             {
                 if( node.header.Name[0] != '\0' )
                 {
                     has_modules = true;
-                    Dmod_Printf("%-30s %-15s %-40s\n",
+                    dmell_printf("%-30s %-15s %-40s\n",
                         node.header.Name,
                         node.header.Version,
                         node.path);
@@ -685,14 +686,14 @@ int dmell_handler_module( int argc, char** argv )
         
         if( !has_modules )
         {
-            Dmod_Printf("No modules available\n");
+            dmell_printf("No modules available\n");
         }
         return 0;
     }
     else
     {
-        Dmod_Printf("Unknown subcommand: %s\n", subcommand);
-        Dmod_Printf("Use 'module' without arguments to see available subcommands\n");
+        dmell_printf("Unknown subcommand: %s\n", subcommand);
+        dmell_printf("Use 'module' without arguments to see available subcommands\n");
         return -EINVAL;
     }
 }

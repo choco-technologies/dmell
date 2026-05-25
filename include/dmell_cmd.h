@@ -20,9 +20,10 @@ typedef struct
 
 typedef struct 
 {
-    const char* program_name; /**< Name of the program */
-    int argc;       /**< Number of arguments */
-    char** argv;    /**< Array of argument strings */
+    const char* program_name;   /**< Name of the program */
+    int argc;                   /**< Number of arguments */
+    char** argv;                /**< Array of argument strings */
+    char* stdout_redirect;      /**< Redirect target path, or NULL if none */
 } dmell_argv_t;
 
 extern int                  dmell_set_default_handler   (dmell_cmd_handler_t handler);

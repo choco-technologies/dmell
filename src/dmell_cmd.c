@@ -1,5 +1,6 @@
 #include "dmell_hlp.h"
 #include "dmell_cmd.h"
+#include "dmell_io.h"
 #include <dmod.h>
 #include <string.h>
 #include <errno.h>
@@ -139,6 +140,9 @@ static void free_argv( dmell_argv_t* argv )
     Dmod_Free( argv->argv );
     argv->argc = 0;
     argv->argv = NULL;
+
+    Dmod_Free( argv->stdout_redirect );
+    argv->stdout_redirect = NULL;
 }
 
 /**
@@ -437,8 +441,29 @@ int dmell_run_command_string(const char* cmd, size_t len)
         return -EINVAL;
     }
 
+    /* Open redirect file when a '>' was found during parsing */
+    void* redirect_file = NULL;
+    if( parsed_argv.stdout_redirect != NULL )
+    {
+        redirect_file = Dmod_FileOpen( parsed_argv.stdout_redirect, "w" );
+        if( redirect_file == NULL )
+        {
+            DMOD_LOG_ERROR("Failed to open redirect target: %s\n", parsed_argv.stdout_redirect);
+            free_argv( &parsed_argv );
+            return -ENOENT;
+        }
+        dmell_set_output_redirect( redirect_file );
+    }
+
     const char* command_name = parsed_argv.argv[0];
     result = dmell_run_command( command_name, parsed_argv.argc, parsed_argv.argv );
+
+    /* Restore stdout and close the redirect file */
+    if( redirect_file != NULL )
+    {
+        dmell_set_output_redirect( NULL );
+        Dmod_FileClose( redirect_file );
+    }
 
     free_argv( &parsed_argv );
     return result;
@@ -480,6 +505,65 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
             return result;
         }
         ptr = (next_arg != NULL) ? next_arg : end_ptr;
+    }
+
+    /* Scan the parsed arguments for a stdout redirect operator '>' and
+     * strip it (and the following target path) from the argv array. */
+    for( int i = 0; i < out_argv->argc; i++ )
+    {
+        const char* token = out_argv->argv[i];
+
+        /* Token is '>' alone, or starts with '>' followed by the target path */
+        if( token[0] == '>' )
+        {
+            const char* redirect_target = NULL;
+
+            if( token[1] != '\0' )
+            {
+                /* Form: '>filename' – target is right after the '>' */
+                redirect_target = token + 1;
+            }
+            else if( i + 1 < out_argv->argc )
+            {
+                /* Form: '> filename' – target is the next argument */
+                redirect_target = out_argv->argv[i + 1];
+            }
+
+            if( redirect_target == NULL || redirect_target[0] == '\0' )
+            {
+                DMOD_LOG_ERROR("Missing redirect target after '>'\n");
+                free_argv( out_argv );
+                return -EINVAL;
+            }
+
+            /* Store a copy of the redirect target path */
+            out_argv->stdout_redirect = Dmod_StrDup( redirect_target );
+            if( out_argv->stdout_redirect == NULL )
+            {
+                DMOD_LOG_ERROR("Memory allocation failed for stdout_redirect\n");
+                free_argv( out_argv );
+                return -ENOMEM;
+            }
+
+            /* Remove the '>' token and the target token (if separate) from argv */
+            int tokens_to_remove = ( token[1] != '\0' ) ? 1 : 2;
+            int first_to_remove  = i;
+
+            for( int j = first_to_remove; j < out_argv->argc - tokens_to_remove; j++ )
+            {
+                out_argv->argv[j] = out_argv->argv[j + tokens_to_remove];
+            }
+            /* Free the removed token strings */
+            for( int j = out_argv->argc - tokens_to_remove; j < out_argv->argc; j++ )
+            {
+                Dmod_Free( out_argv->argv[j] );
+                out_argv->argv[j] = NULL;
+            }
+            out_argv->argc -= tokens_to_remove;
+
+            /* Only handle the first redirect operator found */
+            break;
+        }
     }
 
     return 0;

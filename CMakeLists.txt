@@ -93,6 +93,7 @@ if(NOT DMELL_BUILD_TESTS)
         # List of source files - can include C and C++ files
         src/dmell.c
         src/dmell_cmd.c
+        src/dmell_io.c
         src/dmell_line.c
         src/dmell_script.c
         src/dmell_vars.c
