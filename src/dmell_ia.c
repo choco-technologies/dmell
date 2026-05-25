@@ -8,6 +8,110 @@
 // Maximum length for word completion buffers
 #define MAX_COMPLETION_WORD_LEN 256
 
+// Maximum number of commands to keep in history
+#define DMELL_HISTORY_MAX 32
+
+static char* g_history[DMELL_HISTORY_MAX];
+static size_t g_history_count = 0;
+static size_t g_history_head = 0;
+
+/**
+ * @brief Adds a command line to the history buffer.
+ * 
+ * Empty lines are ignored. When the buffer is full the oldest entry
+ * is overwritten (circular buffer).
+ * 
+ * @param line The command line to store
+ */
+static void history_add(const char* line)
+{
+    if( line == NULL || line[0] == '\0' )
+    {
+        return;
+    }
+
+    if( g_history[g_history_head] != NULL )
+    {
+        Dmod_Free(g_history[g_history_head]);
+        g_history[g_history_head] = NULL;
+    }
+
+    size_t len = strlen(line);
+    g_history[g_history_head] = Dmod_Malloc(len + 1);
+    if( g_history[g_history_head] != NULL )
+    {
+        memcpy(g_history[g_history_head], line, len + 1);
+    }
+
+    g_history_head = (g_history_head + 1) % DMELL_HISTORY_MAX;
+    if( g_history_count < DMELL_HISTORY_MAX )
+    {
+        g_history_count++;
+    }
+}
+
+/**
+ * @brief Retrieves a command from the history buffer.
+ * 
+ * @param offset Distance from the newest entry (0 = newest, 1 = second newest …)
+ * @return const char* Pointer to the history string, or NULL if out of range
+ */
+static const char* history_get(size_t offset)
+{
+    if( offset >= g_history_count )
+    {
+        return NULL;
+    }
+    size_t idx = (g_history_head + DMELL_HISTORY_MAX - 1 - offset) % DMELL_HISTORY_MAX;
+    return g_history[idx];
+}
+
+/**
+ * @brief Replaces the currently displayed input with new content.
+ * 
+ * Moves the cursor back to the start of the typed area, prints the new
+ * content, and overwrites any leftover characters with spaces.
+ * 
+ * @param new_content New string to display (may be NULL for empty line)
+ * @param old_position Current number of visible characters in the input area
+ * @param should_echo Whether terminal echo is active
+ */
+static void replace_line_display(const char* new_content, size_t old_position, bool should_echo)
+{
+    if( !should_echo )
+    {
+        return;
+    }
+
+    size_t new_len = (new_content != NULL) ? strlen(new_content) : 0;
+
+    // Move cursor left to the beginning of the typed input
+    for( size_t i = 0; i < old_position; i++ )
+    {
+        Dmod_Printf("\033[1D");
+    }
+
+    // Print the new content
+    if( new_content != NULL && new_len > 0 )
+    {
+        Dmod_Printf("%s", new_content);
+    }
+
+    // Overwrite leftover characters with spaces, then reposition cursor
+    if( old_position > new_len )
+    {
+        size_t extra = old_position - new_len;
+        for( size_t i = 0; i < extra; i++ )
+        {
+            Dmod_Printf(" ");
+        }
+        for( size_t i = 0; i < extra; i++ )
+        {
+            Dmod_Printf("\033[1D");
+        }
+    }
+}
+
 // External references to registered commands
 extern dmell_cmd_t* g_registered_commands;
 extern size_t g_registered_command_count;
@@ -354,6 +458,10 @@ static char* read_line( size_t* out_len )
     bool should_echo = (original_flags & DMOD_STDIN_FLAG_ECHO) != 0;
 
     size_t position = 0;
+    // History navigation state
+    size_t history_pos = 0;   // 0 = fresh input; 1 = newest history entry; 2 = second newest; …
+    char* saved_input = NULL; // Fresh input saved when the user starts browsing history
+
     while( true )
     {
         int c = Dmod_Getc();
@@ -379,6 +487,106 @@ static char* read_line( size_t* out_len )
                     Dmod_Printf("\033[1D \033[1D");
                 }
             }
+        }
+        else if( c == 27 ) // ESC - potential arrow key sequence
+        {
+            int c2 = Dmod_Getc();
+            if( c2 == '[' )
+            {
+                int c3 = Dmod_Getc();
+                if( c3 == 'A' ) // Arrow up – navigate to an older history entry
+                {
+                    size_t new_history_pos = history_pos + 1;
+                    const char* hist = history_get(new_history_pos - 1);
+                    if( hist != NULL )
+                    {
+                        // Save the current fresh input the first time the user navigates up
+                        if( history_pos == 0 )
+                        {
+                            saved_input = Dmod_Malloc(position + 1);
+                            if( saved_input != NULL )
+                            {
+                                memcpy(saved_input, buffer, position);
+                                saved_input[position] = '\0';
+                            }
+                        }
+                        history_pos = new_history_pos;
+                        size_t hist_len = strlen(hist);
+                        // Resize the input buffer if the history entry is longer
+                        while( hist_len + 1 > buffer_size )
+                        {
+                            buffer_size *= 2;
+                            char* new_buffer = Dmod_Realloc(buffer, buffer_size);
+                            if( new_buffer == NULL )
+                            {
+                                DMOD_LOG_ERROR("Memory allocation failed in read_line during history resize\n");
+                                Dmod_Free(saved_input);
+                                saved_input = NULL;
+                                Dmod_Free(buffer);
+                                buffer = NULL;
+                                goto cleanup;
+                            }
+                            buffer = new_buffer;
+                        }
+                        replace_line_display(hist, position, should_echo);
+                        memcpy(buffer, hist, hist_len + 1);
+                        position = hist_len;
+                    }
+                }
+                else if( c3 == 'B' ) // Arrow down – navigate to a newer history entry
+                {
+                    if( history_pos > 0 )
+                    {
+                        history_pos--;
+                        const char* new_content;
+                        size_t new_len;
+                        if( history_pos == 0 )
+                        {
+                            // Restore the fresh input that was saved before navigation
+                            new_content = saved_input;
+                            new_len = (saved_input != NULL) ? strlen(saved_input) : 0;
+                        }
+                        else
+                        {
+                            new_content = history_get(history_pos - 1);
+                            new_len = (new_content != NULL) ? strlen(new_content) : 0;
+                        }
+                        // Resize the input buffer if the restored content is longer
+                        while( new_len + 1 > buffer_size )
+                        {
+                            buffer_size *= 2;
+                            char* new_buffer = Dmod_Realloc(buffer, buffer_size);
+                            if( new_buffer == NULL )
+                            {
+                                DMOD_LOG_ERROR("Memory allocation failed in read_line during history resize\n");
+                                Dmod_Free(saved_input);
+                                saved_input = NULL;
+                                Dmod_Free(buffer);
+                                buffer = NULL;
+                                goto cleanup;
+                            }
+                            buffer = new_buffer;
+                        }
+                        replace_line_display(new_content, position, should_echo);
+                        if( new_content != NULL )
+                        {
+                            memcpy(buffer, new_content, new_len + 1);
+                        }
+                        else
+                        {
+                            buffer[0] = '\0';
+                        }
+                        position = new_len;
+                        if( history_pos == 0 )
+                        {
+                            Dmod_Free(saved_input);
+                            saved_input = NULL;
+                        }
+                    }
+                }
+                // Other escape sequences (left/right arrow, etc.) are ignored
+            }
+            // Lone ESC or unrecognised sequence is ignored
         }
         else
         {
@@ -412,6 +620,11 @@ cleanup:
     // Restore original stdin flags
     Dmod_Stdin_SetFlags(original_flags);
 
+    if( saved_input != NULL )
+    {
+        Dmod_Free(saved_input);
+    }
+
     if( buffer != NULL && out_len != NULL )
     {
         *out_len = position;
@@ -442,6 +655,7 @@ int dmell_interactive_mode( void )
         }
 
         int exit_code = dmell_run_script_line(&g_dmell_global_script_ctx, line, line_len );
+        history_add(line);
         Dmod_Free( line );
     }
     return 0;
