@@ -176,31 +176,25 @@ static void print_prompt()
 }
 
 /**
- * @brief Find matching file or directory name, supporting paths.
+ * @brief Parse a partial file path into its directory and filename components.
  * 
- * @param partial_name Partial file name or path to match
- * @param out_match Output buffer for the matching name (full path if input contained path)
- * @param max_length Maximum length of the output buffer
- * @return true if a match was found, false otherwise
+ * @param partial_name The partial path to parse (must be non-NULL)
+ * @param out_search_dir Output buffer for the directory to search in (at least 256 bytes)
+ * @param out_partial_filename Output pointer to the filename part within partial_name
+ * @param out_partial_filename_len Output length of the filename part
+ * @param out_dir_prefix_len Output length of the directory prefix (including trailing slash)
+ * @return true on success, false on failure
  */
-static bool find_file_match(const char* partial_name, char* out_match, size_t max_length)
+static bool parse_partial_path(
+    const char* partial_name,
+    char* out_search_dir,
+    const char** out_partial_filename,
+    size_t* out_partial_filename_len,
+    size_t* out_dir_prefix_len)
 {
-    if( partial_name == NULL || out_match == NULL || max_length == 0 )
-    {
-        return false;
-    }
-
-    // Clear output buffer
-    memset(out_match, 0, max_length);
-
-    // Validate partial_name length
     size_t partial_len = strlen(partial_name);
-    if( partial_len == 0 || partial_len >= MAX_COMPLETION_WORD_LEN )
-    {
-        return false;
-    }
 
-    // Parse the partial path to extract directory and filename parts
+    // Find the last '/' in partial_name
     const char* last_slash = NULL;
     for( size_t i = 0; i < partial_len; i++ )
     {
@@ -210,104 +204,248 @@ static bool find_file_match(const char* partial_name, char* out_match, size_t ma
         }
     }
 
-    char* search_dir = Dmod_Malloc( 256 );
-    if( search_dir == NULL )
-    {
-        return false;
-    }
-    search_dir[0] = '\0';
-    const char* partial_filename;
-    size_t partial_filename_len;
-    
     if( last_slash != NULL )
     {
-        // Path contains a slash - extract directory and filename parts
-        size_t dir_len = last_slash - partial_name + 1; // Include the slash
+        size_t dir_len = (size_t)(last_slash - partial_name) + 1; // include the slash
         if( dir_len + 1 > 256 )
         {
-            Dmod_Free( search_dir );
-            return false; // Directory path too long (need space for null terminator)
+            return false;
         }
-        
-        strncpy(search_dir, partial_name, dir_len);
-        search_dir[dir_len] = '\0';
-        
-        // Handle the case where the path is just "/"
-        if( dir_len == 1 && search_dir[0] == '/' )
+
+        strncpy(out_search_dir, partial_name, dir_len);
+        out_search_dir[dir_len] = '\0';
+
+        // Remove trailing slash unless it is the root "/"
+        if( !( dir_len == 1 && out_search_dir[0] == '/' ) )
         {
-            // Keep it as "/"
+            out_search_dir[dir_len - 1] = '\0';
         }
-        else
-        {
-            // Remove trailing slash for directory opening
-            search_dir[dir_len - 1] = '\0';
-        }
-        
-        partial_filename = last_slash + 1;
-        partial_filename_len = partial_len - (last_slash - partial_name + 1);
+
+        *out_partial_filename     = last_slash + 1;
+        *out_partial_filename_len = partial_len - dir_len;
+        *out_dir_prefix_len       = dir_len;
     }
     else
     {
-        // No slash - search in current directory
-        Dmod_GetCwd(search_dir, 256);
-        partial_filename = partial_name;
-        partial_filename_len = partial_len;
+        // No slash – search in current working directory
+        Dmod_GetCwd(out_search_dir, 256);
+        *out_partial_filename     = partial_name;
+        *out_partial_filename_len = partial_len;
+        *out_dir_prefix_len       = 0;
     }
-    
+
+    return true;
+}
+
+/**
+ * @brief Find all matching file/directory entries for a partial path and compute
+ *        the longest common prefix.
+ * 
+ * Uses Dmod_ReadDirEx to detect directory entries so that a trailing '/' can be
+ * appended when there is exactly one match and it is a directory.  When there are
+ * multiple matches the common prefix of all entry names is computed.
+ * 
+ * @param partial_name Partial file name or path to match
+ * @param out_match    Output buffer for the common-prefix match (full path)
+ * @param max_length   Maximum length of the output buffer
+ * @return Number of matching entries (0 = none, 1 = unique, >1 = multiple)
+ */
+static int find_file_matches(const char* partial_name, char* out_match, size_t max_length)
+{
+    if( partial_name == NULL || out_match == NULL || max_length == 0 )
+    {
+        return 0;
+    }
+
+    memset(out_match, 0, max_length);
+
+    size_t partial_len = strlen(partial_name);
+    if( partial_len >= MAX_COMPLETION_WORD_LEN )
+    {
+        return 0;
+    }
+
+    char* search_dir = Dmod_Malloc(256);
+    if( search_dir == NULL )
+    {
+        return 0;
+    }
+    search_dir[0] = '\0';
+
+    const char* partial_filename;
+    size_t partial_filename_len;
+    size_t dir_prefix_len;
+
+    if( !parse_partial_path(partial_name, search_dir, &partial_filename, &partial_filename_len, &dir_prefix_len) )
+    {
+        Dmod_Free(search_dir);
+        return 0;
+    }
+
     void* dir = Dmod_OpenDir(search_dir);
-    Dmod_Free( search_dir );
+    Dmod_Free(search_dir);
     if( dir == NULL )
     {
-        return false;
+        return 0;
     }
-    
-    const char* entry;
-    bool found = false;
-    
-    while( (entry = Dmod_ReadDir(dir)) != NULL )
+
+    char common_prefix[MAX_COMPLETION_WORD_LEN];
+    common_prefix[0] = '\0';
+    size_t common_prefix_len = 0;
+    int match_count = 0;
+    bool single_match_is_dir = false;
+
+    const Dmod_DirEntry_t* entry;
+    while( (entry = Dmod_ReadDirEx(dir)) != NULL )
     {
-        // Skip "." and ".." entries
-        if( strcmp(entry, ".") == 0 || strcmp(entry, "..") == 0 )
+        if( strcmp(entry->name, ".") == 0 || strcmp(entry->name, "..") == 0 )
         {
             continue;
         }
-        
-        // Check if entry starts with the partial filename
-        if( strncmp(entry, partial_filename, partial_filename_len) == 0 )
+
+        if( strncmp(entry->name, partial_filename, partial_filename_len) == 0 )
         {
-            // Build the full match path
-            if( last_slash != NULL )
+            size_t entry_name_len = strlen(entry->name);
+            if( entry_name_len >= MAX_COMPLETION_WORD_LEN )
             {
-                // Reconstruct the path with the directory prefix
-                size_t dir_prefix_len = last_slash - partial_name + 1;
-                size_t entry_len = strlen(entry);
-                
-                if( dir_prefix_len + entry_len + 1 <= max_length )
-                {
-                    // Safely construct the full path using snprintf
-                    strncpy(out_match, partial_name, dir_prefix_len);
-                    strncpy(out_match + dir_prefix_len, entry, max_length - dir_prefix_len - 1);
-                    out_match[dir_prefix_len + entry_len] = '\0';
-                    found = true;
-                }
+                continue; // Entry name too long to handle
+            }
+
+            match_count++;
+
+            if( match_count == 1 )
+            {
+                // First match: initialize common prefix
+                strncpy(common_prefix, entry->name, MAX_COMPLETION_WORD_LEN - 1);
+                common_prefix[MAX_COMPLETION_WORD_LEN - 1] = '\0';
+                common_prefix_len  = entry_name_len;
+                single_match_is_dir = ( entry->type == Dmod_DirEntryType_Dir );
             }
             else
             {
-                // No path prefix, just return the filename
-                size_t entry_len = strlen(entry);
-                if( entry_len + 1 <= max_length )
+                // Narrow the common prefix to what is shared with this entry
+                size_t i = 0;
+                while( i < common_prefix_len && common_prefix[i] == entry->name[i] )
                 {
-                    strncpy(out_match, entry, max_length - 1);
-                    out_match[max_length - 1] = '\0';
-                    found = true;
-                    break;
+                    i++;
                 }
+                common_prefix_len           = i;
+                common_prefix[common_prefix_len] = '\0';
+                single_match_is_dir          = false;
             }
         }
     }
-    
+
     Dmod_CloseDir(dir);
-    return found;
+
+    if( match_count == 0 )
+    {
+        return 0;
+    }
+
+    // For a single directory match append '/' so the user can keep typing the path
+    bool append_slash   = ( match_count == 1 && single_match_is_dir );
+    size_t suffix_len   = common_prefix_len + ( append_slash ? 1 : 0 );
+
+    if( dir_prefix_len + suffix_len + 1 > max_length )
+    {
+        return 0;
+    }
+
+    if( dir_prefix_len > 0 )
+    {
+        strncpy(out_match, partial_name, dir_prefix_len);
+    }
+    strncpy(out_match + dir_prefix_len, common_prefix, common_prefix_len);
+    if( append_slash )
+    {
+        out_match[dir_prefix_len + common_prefix_len]     = '/';
+        out_match[dir_prefix_len + common_prefix_len + 1] = '\0';
+    }
+    else
+    {
+        out_match[dir_prefix_len + common_prefix_len] = '\0';
+    }
+
+    return match_count;
+}
+
+/**
+ * @brief Print all matching file/directory entries for a partial path.
+ * 
+ * Entries that are directories are printed with a trailing '/'.
+ * Entries are separated by two spaces.
+ * A trailing newline is printed after the last entry.
+ * 
+ * @param partial_name Partial file name or path to match
+ */
+static void print_file_matches(const char* partial_name)
+{
+    if( partial_name == NULL )
+    {
+        return;
+    }
+
+    size_t partial_len = strlen(partial_name);
+    if( partial_len >= MAX_COMPLETION_WORD_LEN )
+    {
+        return;
+    }
+
+    char* search_dir = Dmod_Malloc(256);
+    if( search_dir == NULL )
+    {
+        return;
+    }
+    search_dir[0] = '\0';
+
+    const char* partial_filename;
+    size_t partial_filename_len;
+    size_t dir_prefix_len;
+
+    if( !parse_partial_path(partial_name, search_dir, &partial_filename, &partial_filename_len, &dir_prefix_len) )
+    {
+        Dmod_Free(search_dir);
+        return;
+    }
+
+    void* dir = Dmod_OpenDir(search_dir);
+    Dmod_Free(search_dir);
+    if( dir == NULL )
+    {
+        return;
+    }
+
+    bool printed_any = false;
+    const Dmod_DirEntry_t* entry;
+    while( (entry = Dmod_ReadDirEx(dir)) != NULL )
+    {
+        if( strcmp(entry->name, ".") == 0 || strcmp(entry->name, "..") == 0 )
+        {
+            continue;
+        }
+
+        if( strncmp(entry->name, partial_filename, partial_filename_len) == 0 )
+        {
+            if( printed_any )
+            {
+                Dmod_Printf("  ");
+            }
+            Dmod_Printf("%s", entry->name);
+            if( entry->type == Dmod_DirEntryType_Dir )
+            {
+                Dmod_Printf("/");
+            }
+            printed_any = true;
+        }
+    }
+
+    if( printed_any )
+    {
+        Dmod_Printf("\n");
+    }
+
+    Dmod_CloseDir(dir);
 }
 
 /**
@@ -387,40 +525,50 @@ static size_t handle_tab_completion(char* buffer, size_t position, size_t buffer
     }
     
     // For subsequent words or if no command match found, try file completion
+    int file_match_count = 0;
     if( !found )
     {
-        found = find_file_match(partial_word, match, MAX_COMPLETION_WORD_LEN);
+        file_match_count = find_file_matches(partial_word, match, MAX_COMPLETION_WORD_LEN);
+        found = ( file_match_count > 0 );
     }
 
     if( found )
     {
         size_t match_len = strlen(match);
-        
-        // Verify that the match is actually longer than our partial word
-        if( match_len <= word_len )
-        {
-            Dmod_Free( match );
-            return position;
-        }
-        
-        size_t completion_len = match_len - word_len;
-        
-        // Check if there's enough space in the buffer
-        if( position + completion_len >= buffer_size )
-        {
-            Dmod_Free( match );
-            return position;
-        }
 
-        // Append the completion to the buffer
-        for( size_t i = 0; i < completion_len; i++ )
+        if( match_len > word_len )
         {
-            buffer[position] = match[word_len + i];
-            if( should_echo )
+            // There are additional characters to append
+            size_t completion_len = match_len - word_len;
+
+            // Check if there's enough space in the buffer
+            if( position + completion_len >= buffer_size )
             {
-                Dmod_Printf("%c", buffer[position]);
+                Dmod_Free( match );
+                return position;
             }
-            position++;
+
+            // Append the completion to the buffer
+            for( size_t i = 0; i < completion_len; i++ )
+            {
+                buffer[position] = match[word_len + i];
+                if( should_echo )
+                {
+                    Dmod_Printf("%c", buffer[position]);
+                }
+                position++;
+            }
+        }
+        else if( file_match_count > 1 && should_echo )
+        {
+            // No further prefix extension is possible – list all matching entries
+            // so the user can see the available options (Linux-like behaviour).
+            Dmod_Printf("\n");
+            print_file_matches(partial_word);
+            // Reprint the prompt and the buffer contents so the user can continue
+            print_prompt();
+            buffer[position] = '\0';
+            Dmod_Printf("%s", buffer);
         }
     }
 
