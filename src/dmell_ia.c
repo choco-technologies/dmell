@@ -189,7 +189,6 @@ static int find_file_matches(const char* partial_name, char* out_match, size_t m
     common_prefix[0] = '\0';
     size_t common_prefix_len = 0;
     int match_count = 0;
-    bool single_match_is_dir = false;
 
     const Dmod_DirEntry_t* entry;
     while( (entry = Dmod_ReadDirEx(dir)) != NULL )
@@ -214,8 +213,7 @@ static int find_file_matches(const char* partial_name, char* out_match, size_t m
                 // First match: initialize common prefix
                 strncpy(common_prefix, entry->name, MAX_COMPLETION_WORD_LEN - 1);
                 common_prefix[MAX_COMPLETION_WORD_LEN - 1] = '\0';
-                common_prefix_len  = entry_name_len;
-                single_match_is_dir = ( entry->type == Dmod_DirEntryType_Dir );
+                common_prefix_len = entry_name_len;
             }
             else
             {
@@ -225,9 +223,8 @@ static int find_file_matches(const char* partial_name, char* out_match, size_t m
                 {
                     i++;
                 }
-                common_prefix_len           = i;
+                common_prefix_len            = i;
                 common_prefix[common_prefix_len] = '\0';
-                single_match_is_dir          = false;
             }
         }
     }
@@ -239,9 +236,33 @@ static int find_file_matches(const char* partial_name, char* out_match, size_t m
         return 0;
     }
 
-    // For a single directory match append '/' so the user can keep typing the path
-    bool append_slash   = ( match_count == 1 && single_match_is_dir );
-    size_t suffix_len   = common_prefix_len + ( append_slash ? 1 : 0 );
+    // For a single match, verify it is an actual directory by attempting to open
+    // it - do not rely on entry->type which may be unreliable on virtual filesystems.
+    bool append_slash = false;
+    if( match_count == 1 )
+    {
+        // Construct the full path: directory prefix + matched entry name
+        char full_path[MAX_COMPLETION_WORD_LEN * 2];
+        size_t full_path_len = dir_prefix_len + common_prefix_len;
+        if( full_path_len + 1 <= sizeof(full_path) )
+        {
+            if( dir_prefix_len > 0 )
+            {
+                strncpy(full_path, partial_name, dir_prefix_len);
+            }
+            strncpy(full_path + dir_prefix_len, common_prefix, common_prefix_len);
+            full_path[full_path_len] = '\0';
+
+            void* verify_dir = Dmod_OpenDir(full_path);
+            if( verify_dir != NULL )
+            {
+                Dmod_CloseDir(verify_dir);
+                append_slash = true;
+            }
+        }
+    }
+
+    size_t suffix_len = common_prefix_len + ( append_slash ? 1 : 0 );
 
     if( dir_prefix_len + suffix_len + 1 > max_length )
     {
