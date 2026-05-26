@@ -7,7 +7,7 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 
 ## Features
 
-- **Built-in Commands**: Basic shell commands like `echo`, `cd`, `pwd`, `set`, `unset`, `export`, and `exit`
+- **Built-in Commands**: Basic shell commands like `echo`, `write`, `read`, `help`, `cd`, `pwd`, `set`, `unset`, `export`, and `exit`
 - **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`, `rm`, `rmdir`, `find`, `which`, `printf`) available as separate DMOD modules
 - **Script Execution**: Support for `.dme` script files
 - **Variable Management**: Environment variables and shell variables support
@@ -17,7 +17,10 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 
 | Command | Description |
 |---------|-------------|
+| `help`  | Show built-in command help |
 | `echo`  | Print arguments to standard output |
+| `write` | Write text to a file |
+| `read`  | Read and print file contents |
 | `cd`    | Change current directory |
 | `pwd`   | Print current working directory |
 | `set`   | Set a shell variable |
