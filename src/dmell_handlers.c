@@ -7,6 +7,8 @@
 #include "dmell_handlers.h"
 #include "dmell.h"
 
+#define DMELL_FILE_IO_BUFFER_SIZE 512
+
 /**
  * @brief Handler for the 'echo' command.
  * 
@@ -122,7 +124,7 @@ int dmell_handler_read( int argc, char** argv )
         return -ENOENT;
     }
 
-    char buffer[512];
+    char buffer[DMELL_FILE_IO_BUFFER_SIZE];
     size_t bytes_read = 0;
     while( (bytes_read = Dmod_FileRead( buffer, 1, sizeof(buffer) - 1, file )) > 0 )
     {
