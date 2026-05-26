@@ -133,10 +133,11 @@ set varname=value
 
 ### export
 
-Export a variable to the environment (also sets it as a shell variable):
+Export a variable to the environment (also sets it as a shell variable). When called without arguments, lists all currently set environment variables:
 
 ```bash
 export PATH=/usr/bin
+export    # Lists all environment variables
 ```
 
 ### unset
