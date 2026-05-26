@@ -49,6 +49,17 @@ int dmell_handler_set( int argc, char** argv )
     {
         if(argc < 2)
         {
+            if(strcmp(command, "export") == 0)
+            {
+                const char* name = Dmod_GetNextEnvName(NULL);
+                while(name != NULL)
+                {
+                    const char* value = Dmod_GetEnv(name);
+                    Dmod_Printf("%s=%s\n", name, value ? value : "");
+                    name = Dmod_GetNextEnvName(name);
+                }
+                return 0;
+            }
             DMOD_LOG_ERROR("Missing evaluation for '%s'\n", command);
             return -EINVAL;
         }
