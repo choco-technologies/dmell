@@ -217,6 +217,7 @@ int main(int argc, char** argv)
                 if (c == '\r')
                 {
                     // Skip CR to handle \r\n line endings
+                    continue;
                 }
                 else if (c == '\n')
                 {
