@@ -4,6 +4,9 @@
 #include "dmell_cmd.h"
 
 extern int dmell_handler_echo( int argc, char** argv );
+extern int dmell_handler_write( int argc, char** argv );
+extern int dmell_handler_read( int argc, char** argv );
+extern int dmell_handler_help( int argc, char** argv );
 extern int dmell_handler_set( int argc, char** argv );
 extern int dmell_handler_unset( int argc, char** argv );
 extern int dmell_handler_cd( int argc, char** argv );

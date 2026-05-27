@@ -7,6 +7,8 @@
 #include "dmell_handlers.h"
 #include "dmell.h"
 
+#define DMELL_FILE_IO_BUFFER_SIZE 512
+
 /**
  * @brief Handler for the 'echo' command.
  * 
@@ -25,6 +27,141 @@ int dmell_handler_echo( int argc, char** argv )
         }
     }
     Dmod_Printf("\n");
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'write' command.
+ *
+ * Usage: write <file> <content...>
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_write( int argc, char** argv )
+{
+    if( argc < 3 )
+    {
+        DMOD_LOG_ERROR("Usage: write <file> <content...>\n");
+        return -EINVAL;
+    }
+
+    const char* file_path = argv[1];
+    if( file_path == NULL || *file_path == '\0' )
+    {
+        DMOD_LOG_ERROR("Invalid file path in write command\n");
+        return -EINVAL;
+    }
+
+    void* file = Dmod_FileOpen( file_path, "w" );
+    if( file == NULL )
+    {
+        DMOD_LOG_ERROR("Failed to open file '%s' for writing\n", file_path);
+        return -ENOENT;
+    }
+
+    for( int i = 2; i < argc; i++ )
+    {
+        const char* chunk = argv[i] ? argv[i] : "";
+        size_t chunk_len = strlen( chunk );
+
+        if( chunk_len > 0 )
+        {
+            size_t bytes_written = Dmod_FileWrite( chunk, 1, chunk_len, file );
+            if( bytes_written != chunk_len )
+            {
+                Dmod_FileClose( file );
+                DMOD_LOG_ERROR("Failed to write content to '%s'\n", file_path);
+                return -EIO;
+            }
+        }
+
+        if( i < argc - 1 )
+        {
+            size_t bytes_written = Dmod_FileWrite( " ", 1, 1, file );
+            if( bytes_written != 1 )
+            {
+                Dmod_FileClose( file );
+                DMOD_LOG_ERROR("Failed to write content to '%s'\n", file_path);
+                return -EIO;
+            }
+        }
+    }
+
+    Dmod_FileClose( file );
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'read' command.
+ *
+ * Usage: read <file>
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_read( int argc, char** argv )
+{
+    if( argc < 2 )
+    {
+        DMOD_LOG_ERROR("Usage: read <file>\n");
+        return -EINVAL;
+    }
+
+    const char* file_path = argv[1];
+    if( file_path == NULL || *file_path == '\0' )
+    {
+        DMOD_LOG_ERROR("Invalid file path in read command\n");
+        return -EINVAL;
+    }
+
+    void* file = Dmod_FileOpen( file_path, "r" );
+    if( file == NULL )
+    {
+        DMOD_LOG_ERROR("Failed to open file '%s' for reading\n", file_path);
+        return -ENOENT;
+    }
+
+    char buffer[DMELL_FILE_IO_BUFFER_SIZE];
+    size_t bytes_read = 0;
+    while( (bytes_read = Dmod_FileRead( buffer, 1, sizeof(buffer) - 1, file )) > 0 )
+    {
+        buffer[bytes_read] = '\0';
+        Dmod_Printf("%s", buffer);
+    }
+
+    Dmod_FileClose( file );
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'help' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+int dmell_handler_help( int argc, char** argv )
+{
+    (void)argc;
+    (void)argv;
+
+    Dmod_Printf("Built-in commands:\n");
+    Dmod_Printf("  help                         Show this help message\n");
+    Dmod_Printf("  echo [args...]               Print arguments\n");
+    Dmod_Printf("  write <file> <content...>    Write content to a file\n");
+    Dmod_Printf("  read <file>                  Read and print file content\n");
+    Dmod_Printf("  set <name=value>             Set a shell variable\n");
+    Dmod_Printf("  export <name=value>          Export an environment variable\n");
+    Dmod_Printf("  unset <name>                 Remove a variable\n");
+    Dmod_Printf("  cd [path]                    Change current directory\n");
+    Dmod_Printf("  pwd                          Print current directory\n");
+    Dmod_Printf("  module ...                   Manage DMOD modules\n");
+    Dmod_Printf("  uptime                       Show system uptime\n");
+    Dmod_Printf("  setloglevel <level>          Set shell log level\n");
+    Dmod_Printf("  exit [code]                  Exit the shell\n");
     return 0;
 }
 
@@ -719,6 +856,9 @@ int dmell_register_handlers( void )
     Dmod_SetLogLevel( Dmod_LogLevel_Warn );
 
     dmell_register_command_handler( "echo", dmell_handler_echo );
+    dmell_register_command_handler( "write", dmell_handler_write );
+    dmell_register_command_handler( "read", dmell_handler_read );
+    dmell_register_command_handler( "help", dmell_handler_help );
     dmell_register_command_handler( "set", dmell_handler_set );
     dmell_register_command_handler( "unset", dmell_handler_unset );
     dmell_register_command_handler( "export", dmell_handler_set );
