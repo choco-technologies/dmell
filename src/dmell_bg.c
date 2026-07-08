@@ -133,14 +133,23 @@ int dmell_run_background( const char* cmd, size_t len )
     Dmod_StreamRedirections_t streams = { .Entries = entries, .Count = 0 };
     dmell_redirect_snapshot_current_process( entries, &streams.Count );
 
+    /* Restore dmell's own streams *before* spawning, not after: the snapshot above
+     * already captured independent, owned copies of the paths to hand to the child
+     * explicitly via Streams, so nothing after this point needs the redirect to
+     * still be active on dmell itself. Loading and spawning the module happens
+     * synchronously on dmell's own thread (the child's own thread hasn't started
+     * yet), and it logs plenty on its own (module loading, API connection, ...) -
+     * with the redirect still applied, all of that would go to the child's
+     * target instead of the console, and for a file-backed target it can even
+     * exhaust the heap writing dmell's own diagnostic output into it. */
+    dmell_redirect_restore_current_process( &backup );
+
     int pid = Dmod_SpawnModule( command_name, parsed_argv.argc, parsed_argv.argv, streams.Count > 0 ? &streams : NULL );
 
     for( size_t i = 0; i < streams.Count; i++ )
     {
         Dmod_Free( (void*)entries[i].Path );
     }
-
-    dmell_redirect_restore_current_process( &backup );
 
     if( pid < 0 )
     {
