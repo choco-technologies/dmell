@@ -5,6 +5,7 @@
 #include <dmod.h>
 #include <dmosi.h>
 #include "dmell_handlers.h"
+#include "dmell_redirect.h"
 #include "dmell.h"
 
 #define DMELL_FILE_IO_BUFFER_SIZE 512
@@ -555,6 +556,14 @@ static int run_shebang( char* interpreter, char* script_file, int argc, char** a
  * Falls back to Dmod_SpawnModule when Dmod_RunModule fails with -ENOMEM,
  * then waits for the spawned process to finish using the dmosi process API.
  *
+ * By the time this runs, dmell_run_command_string() has already applied any
+ * requested redirection to dmell's own process (see dmell_redirect.h). Rather
+ * than assuming the spawned child inherits that automatically - which is an
+ * implementation detail of a particular dmosi backend, not a guarantee of the
+ * Dmod_Spawn API - this reads dmell's own current stream bindings back via
+ * Dmod_GetStreamRedirections() and forwards them explicitly, so redirection
+ * works the same regardless of what the backend does on its own.
+ *
  * @param file_name Path or name of the module to spawn
  * @param argc Number of arguments
  * @param argv Array of argument strings
@@ -568,7 +577,26 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
         return -ENOMEM;
     }
 
-    int pid = Dmod_SpawnModule( file_name, argc, argv );
+    Dmod_StreamRedirection_t entries[DMELL_STREAM_COUNT];
+    Dmod_StreamRedirections_t streams = { .Entries = entries, .Count = 0 };
+
+    if( Dmod_IsFunctionConnected( (void*)Dmod_GetStreamRedirections ) )
+    {
+        int result = Dmod_GetStreamRedirections( Dmod_GetCurrentPid(), entries, DMELL_STREAM_COUNT, &streams.Count );
+        if( result < 0 )
+        {
+            DMOD_LOG_ERROR("Failed to read current process stream bindings before spawning\n");
+            return result;
+        }
+    }
+
+    int pid = Dmod_SpawnModule( file_name, argc, argv, streams.Count > 0 ? &streams : NULL );
+
+    for( size_t i = 0; i < streams.Count; i++ )
+    {
+        Dmod_Free( (void*)entries[i].Path );
+    }
+
     if( pid < 0 )
     {
         return pid;
@@ -588,7 +616,7 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
 
 /**
  * @brief Default handler for unknown commands.
- * 
+ *
  * @param argc Number of arguments
  * @param argv Array of argument strings
  * @return int Exit code
@@ -627,7 +655,7 @@ int dmell_handler_default( int argc, char** argv )
                 result = Dmod_RunModule( file_name, argc, argv );
             }
         }
-        else 
+        else
         {
             result = Dmod_RunModule( file_name, argc, argv );
         }

@@ -1,5 +1,6 @@
 #include "dmell_hlp.h"
 #include "dmell_cmd.h"
+#include "dmell_redirect.h"
 #include <dmod.h>
 #include <string.h>
 #include <errno.h>
@@ -82,6 +83,116 @@ static char* duplicate_arg( const char* arg, size_t len )
 }
 
 /**
+ * @brief Helper function to append a parsed redirection operator to a dmell_argv_t.
+ *
+ * @param argv Pointer to the dmell_argv_t structure
+ * @param redirect Redirection entry to append (its path ownership is transferred)
+ * @return int 0 on success, negative value on error
+ */
+static int add_redirect( dmell_argv_t* argv, const dmell_redirect_t* redirect )
+{
+    dmell_redirect_t* new_redirects = Dmod_Realloc( argv->redirects, sizeof(dmell_redirect_t) * (argv->redirect_count + 1) );
+    if( new_redirects == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in add_redirect\n");
+        return -ENOMEM;
+    }
+
+    argv->redirects = new_redirects;
+    argv->redirects[argv->redirect_count] = *redirect;
+    argv->redirect_count += 1;
+    return 0;
+}
+
+/**
+ * @brief Helper function to remove a run of tokens from argv, freeing them.
+ *
+ * @param argv Pointer to the dmell_argv_t structure
+ * @param index Index of the first token to remove
+ * @param count Number of consecutive tokens to remove
+ */
+static void remove_tokens( dmell_argv_t* argv, int index, int count )
+{
+    for( int j = index; j < argv->argc - count; j++ )
+    {
+        argv->argv[j] = argv->argv[j + count];
+    }
+    for( int j = argv->argc - count; j < argv->argc; j++ )
+    {
+        Dmod_Free( argv->argv[j] );
+        argv->argv[j] = NULL;
+    }
+    argv->argc -= count;
+}
+
+/**
+ * @brief Scan already-tokenized arguments for redirection operators, stripping
+ *        them out of argv and recording them on out_argv->redirects in the
+ *        order they were encountered (order matters for 'N>&M' duplication).
+ *
+ * @param out_argv Structure whose argv array is scanned and mutated in place
+ * @return int 0 on success, negative value on error
+ */
+static int extract_redirects( dmell_argv_t* out_argv )
+{
+    for( int i = 0; i < out_argv->argc; )
+    {
+        const char* token = out_argv->argv[i];
+        dmell_redirect_match_t match;
+
+        if( !dmell_redirect_match_token( token, &match ) )
+        {
+            i++;
+            continue;
+        }
+
+        int tokens_to_remove = 1;
+        const char* target = match.attached_target;
+
+        if( !match.is_dup && match.needs_target )
+        {
+            if( i + 1 >= out_argv->argc || out_argv->argv[i + 1][0] == '\0' )
+            {
+                DMOD_LOG_ERROR("Missing redirect target after '%s'\n", token);
+                return -EINVAL;
+            }
+            target = out_argv->argv[i + 1];
+            tokens_to_remove = 2;
+        }
+
+        for( int op = 0; op < match.op_count; op++ )
+        {
+            dmell_redirect_t redirect = {0};
+            redirect.stream     = match.stream[op];
+            redirect.is_dup     = match.is_dup;
+            redirect.dup_source = match.dup_source;
+            redirect.append     = match.append;
+
+            if( !match.is_dup )
+            {
+                redirect.path = Dmod_StrDup( target );
+                if( redirect.path == NULL )
+                {
+                    DMOD_LOG_ERROR("Memory allocation failed for redirect target\n");
+                    return -ENOMEM;
+                }
+            }
+
+            int result = add_redirect( out_argv, &redirect );
+            if( result < 0 )
+            {
+                Dmod_Free( redirect.path );
+                return result;
+            }
+        }
+
+        remove_tokens( out_argv, i, tokens_to_remove );
+    }
+
+    return 0;
+}
+
+/**
  * @brief Helper function to add an argument to the dmell_argv_t structure.
  * 
  * @param argv Pointer to the dmell_argv_t structure
@@ -139,6 +250,10 @@ static void free_argv( dmell_argv_t* argv )
     Dmod_Free( argv->argv );
     argv->argc = 0;
     argv->argv = NULL;
+
+    dmell_redirect_free( argv->redirects, argv->redirect_count );
+    argv->redirects = NULL;
+    argv->redirect_count = 0;
 }
 
 /**
@@ -438,7 +553,18 @@ int dmell_run_command_string(const char* cmd, size_t len)
     }
 
     const char* command_name = parsed_argv.argv[0];
+
+    dmell_redirect_backup_t redirect_backup;
+    result = dmell_redirect_apply_to_current_process( parsed_argv.redirects, parsed_argv.redirect_count, &redirect_backup );
+    if( result < 0 )
+    {
+        DMOD_LOG_ERROR("Failed to apply stream redirection for command: %s\n", command_name);
+        free_argv( &parsed_argv );
+        return result;
+    }
+
     result = dmell_run_command( command_name, parsed_argv.argc, parsed_argv.argv );
+    dmell_redirect_restore_current_process( &redirect_backup );
 
     free_argv( &parsed_argv );
     return result;
@@ -480,6 +606,14 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
             return result;
         }
         ptr = (next_arg != NULL) ? next_arg : end_ptr;
+    }
+
+    result = extract_redirects( out_argv );
+    if( result < 0 )
+    {
+        DMOD_LOG_ERROR("Failed to parse redirection operators in dmell_parse_command\n");
+        free_argv( out_argv );
+        return result;
     }
 
     return 0;

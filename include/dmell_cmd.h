@@ -2,27 +2,30 @@
 #define DMELL_CMD_H
 
 #include <stddef.h>
+#include "dmell_redirect.h"
 
-/** 
+/**
  * @file dmell_cmd.h
  * @brief Header file for command handling in the dmell module.
  */
 typedef int (*dmell_cmd_handler_t)(int argc, char** argv);
 
-/** 
+/**
  * @brief Structure defining a command for the dmell module.
  */
-typedef struct 
+typedef struct
 {
     const char*         name;           /**< Name of the command */
     dmell_cmd_handler_t handler;        /**< Function pointer to the command handler */
 } dmell_cmd_t;
 
-typedef struct 
+typedef struct
 {
-    const char* program_name; /**< Name of the program */
-    int argc;       /**< Number of arguments */
-    char** argv;    /**< Array of argument strings */
+    const char*        program_name;    /**< Name of the program */
+    int                argc;            /**< Number of arguments */
+    char**             argv;            /**< Array of argument strings */
+    dmell_redirect_t*  redirects;       /**< Stream redirections parsed from the command, or NULL if none */
+    size_t             redirect_count;  /**< Number of entries in redirects */
 } dmell_argv_t;
 
 extern int                  dmell_set_default_handler   (dmell_cmd_handler_t handler);
