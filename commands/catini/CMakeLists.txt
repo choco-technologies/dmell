@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.18)
 set(CATINI_MODULE_NAME catini)
 
 # Stack size for the catini module
-set(DMOD_STACK_SIZE 512)
+set(DMOD_STACK_SIZE 1024)
 
 # Create the module executable
 dmod_add_executable(${CATINI_MODULE_NAME} ${DMOD_MODULE_VERSION}

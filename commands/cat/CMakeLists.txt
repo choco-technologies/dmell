@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.18)
 set(CAT_MODULE_NAME cat)
 
 # Stack size for the cat module
-set(DMOD_STACK_SIZE 512)
+set(DMOD_STACK_SIZE 1024)
 
 # Create the module executable
 dmod_add_executable(${CAT_MODULE_NAME} ${DMOD_MODULE_VERSION}

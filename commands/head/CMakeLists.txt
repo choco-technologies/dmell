@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.18)
 set(HEAD_MODULE_NAME head)
 
 # Stack size for the head module
-set(DMOD_STACK_SIZE 512)
+set(DMOD_STACK_SIZE 1024)
 
 # Create the module executable
 dmod_add_executable(${HEAD_MODULE_NAME} ${DMOD_MODULE_VERSION}
