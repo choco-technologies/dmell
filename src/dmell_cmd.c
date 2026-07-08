@@ -113,15 +113,20 @@ static int add_redirect( dmell_argv_t* argv, const dmell_redirect_t* redirect )
  */
 static void remove_tokens( dmell_argv_t* argv, int index, int count )
 {
+    /* Free the tokens actually being removed first - shifting the tail left
+     * over them would silently leak these pointers, and freeing the (now
+     * duplicated) tail slots afterwards instead would free memory that's
+     * still referenced by the shifted-in positions. */
+    for( int j = index; j < index + count; j++ )
+    {
+        Dmod_Free( argv->argv[j] );
+    }
+
     for( int j = index; j < argv->argc - count; j++ )
     {
         argv->argv[j] = argv->argv[j + count];
     }
-    for( int j = argv->argc - count; j < argv->argc; j++ )
-    {
-        Dmod_Free( argv->argv[j] );
-        argv->argv[j] = NULL;
-    }
+
     argv->argc -= count;
 }
 
