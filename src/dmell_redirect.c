@@ -276,3 +276,19 @@ int dmell_redirect_apply_to_current_process( const dmell_redirect_t* redirects, 
 
     return 0;
 }
+
+int dmell_redirect_snapshot_current_process( Dmod_StreamRedirection_t* out_entries, size_t* out_count )
+{
+    if( out_count == NULL )
+    {
+        return -EINVAL;
+    }
+    *out_count = 0;
+
+    if( !Dmod_IsFunctionConnected( (void*)Dmod_GetStreamRedirections ) )
+    {
+        return 0;
+    }
+
+    return Dmod_GetStreamRedirections( Dmod_GetCurrentPid(), out_entries, DMELL_STREAM_COUNT, out_count );
+}

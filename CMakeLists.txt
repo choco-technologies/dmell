@@ -47,7 +47,7 @@ set(DMOD_DIR ${dmod_SOURCE_DIR} CACHE PATH "DMOD source directory")
 FetchContent_Declare(
     dmosi
     GIT_REPOSITORY https://github.com/choco-technologies/dmosi.git
-    GIT_TAG        2920b2e05db51e6fffc9e2d54cae3dd6cfc8348b
+    GIT_TAG        bb981a55bf9191d218baf5323b8bb7e21cf7f7b6
 )
 FetchContent_MakeAvailable(dmosi)
 
@@ -94,6 +94,7 @@ if(NOT DMELL_BUILD_TESTS)
         src/dmell.c
         src/dmell_cmd.c
         src/dmell_redirect.c
+        src/dmell_bg.c
         src/dmell_line.c
         src/dmell_script.c
         src/dmell_vars.c

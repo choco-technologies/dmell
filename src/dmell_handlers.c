@@ -580,14 +580,11 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
     Dmod_StreamRedirection_t entries[DMELL_STREAM_COUNT];
     Dmod_StreamRedirections_t streams = { .Entries = entries, .Count = 0 };
 
-    if( Dmod_IsFunctionConnected( (void*)Dmod_GetStreamRedirections ) )
+    int result = dmell_redirect_snapshot_current_process( entries, &streams.Count );
+    if( result < 0 )
     {
-        int result = Dmod_GetStreamRedirections( Dmod_GetCurrentPid(), entries, DMELL_STREAM_COUNT, &streams.Count );
-        if( result < 0 )
-        {
-            DMOD_LOG_ERROR("Failed to read current process stream bindings before spawning\n");
-            return result;
-        }
+        DMOD_LOG_ERROR("Failed to read current process stream bindings before spawning\n");
+        return result;
     }
 
     int pid = Dmod_SpawnModule( file_name, argc, argv, streams.Count > 0 ? &streams : NULL );

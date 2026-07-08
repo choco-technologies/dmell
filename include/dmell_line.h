@@ -6,12 +6,13 @@
 /**
  * @brief Enumeration of command line separators.
  */
-typedef enum 
+typedef enum
 {
-    dmell_line_sep_none,    //!< No separator
-    dmell_line_sep_and,     //!< '&&' separator
-    dmell_line_sep_or,      //!< '||' separator
-    dmell_line_sep_seq,     //!< Semicolon or newline separator
+    dmell_line_sep_none,       //!< No separator
+    dmell_line_sep_and,        //!< '&&' separator
+    dmell_line_sep_or,         //!< '||' separator
+    dmell_line_sep_seq,        //!< Semicolon or newline separator
+    dmell_line_sep_background, //!< Single '&' - run the preceding command in the background
 
     dmell_line_sep_max      //!< Maximum value for validation
 } dmell_line_sep_t;

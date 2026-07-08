@@ -238,6 +238,27 @@ redirect on the line that invokes it. Redirection requires the underlying
 platform to support binding a process's streams to files; if it doesn't,
 dmell reports an error rather than silently running the command unredirected.
 
+### Background Execution
+
+A command followed by `&` runs in the background: dmell launches it and moves
+on immediately instead of waiting for it to finish.
+
+```bash
+myapp &                  # launched, prompt/next command continues right away
+myapp 2>/tmp/errors.txt & # redirection still works exactly the same way
+myapp & echo "next"       # "next" prints without waiting for myapp
+```
+
+Like `;`, `&` never blocks the rest of the line on the exit status of the
+command it follows - the next command always runs.
+
+Background execution is only supported for external DMOD module commands.
+Built-in commands (`echo`, `cd`, `module`, ...), variable assignment, and
+`.dme` scripts all execute inside dmell's own process/thread and have no
+independent execution context to hand off without blocking the shell, so
+`&` on one of those is rejected with an error instead of silently running
+in the foreground.
+
 ## Script Example
 
 ```bash

@@ -5,6 +5,7 @@
 #include "dmell_cmd.h"
 #include "dmell_line.h"
 #include "dmell_hlp.h"
+#include "dmell_bg.h"
 
 /**
  * @brief Helper function to check if the current position is an 'OR' separator (||).
@@ -34,7 +35,7 @@ static bool is_and_separator( const char* str, const char* end_ptr )
 
 /**
  * @brief Helper function to check if the current position is a sequence separator (; or \n).
- * 
+ *
  * @param str Current position in the command string
  * @param end_ptr Pointer to the end of the command string
  * @return true If it is a sequence separator
@@ -43,6 +44,22 @@ static bool is_and_separator( const char* str, const char* end_ptr )
 static bool is_sequence_separator( const char* str, const char* end_ptr )
 {
     return str < end_ptr && ( str[0] == ';' || str[0] == '\n' );
+}
+
+/**
+ * @brief Helper function to check if the current position is a background separator (&).
+ *
+ * Must only be checked after ruling out the '&&' AND separator, since this only
+ * looks at a single character.
+ *
+ * @param str Current position in the command string
+ * @param end_ptr Pointer to the end of the command string
+ * @return true If it is a background separator
+ * @return false Otherwise
+ */
+static bool is_background_separator( const char* str, const char* end_ptr )
+{
+    return str < end_ptr && str[0] == '&';
 }
 
 /**
@@ -66,6 +83,10 @@ static dmell_line_sep_t get_command_separator( const char* str, const char* end_
     {
         return dmell_line_sep_seq;
     }
+    else if( is_background_separator( str, end_ptr ) )
+    {
+        return dmell_line_sep_background;
+    }
     return dmell_line_sep_none;
 }
 
@@ -80,10 +101,11 @@ static dmell_line_sep_t get_command_separator( const char* str, const char* end_
 static const char* skip_separator( const char* str, const char* end_ptr, dmell_line_sep_t sep )
 {
     size_t sep_len[dmell_line_sep_max] = {
-        [dmell_line_sep_none] = 0,
-        [dmell_line_sep_and]  = 2,
-        [dmell_line_sep_or]   = 2,
-        [dmell_line_sep_seq]  = 1
+        [dmell_line_sep_none]       = 0,
+        [dmell_line_sep_and]        = 2,
+        [dmell_line_sep_or]         = 2,
+        [dmell_line_sep_seq]        = 1,
+        [dmell_line_sep_background] = 1
     };
 
     const char* ptr = str + sep_len[sep];
@@ -142,6 +164,7 @@ static int join_results(int last_exit_code, int current_exit_code, dmell_line_se
         case dmell_line_sep_or:
             return (last_exit_code != 0) ? current_exit_code : last_exit_code;
         case dmell_line_sep_seq:
+        case dmell_line_sep_background:
             return current_exit_code;
         case dmell_line_sep_none:
         default:
@@ -166,6 +189,7 @@ static bool should_execute_command(int last_exit_code, dmell_line_sep_t sep)
         case dmell_line_sep_or:
             return (last_exit_code != 0);
         case dmell_line_sep_seq:
+        case dmell_line_sep_background:
         case dmell_line_sep_none:
         default:
             return true;
@@ -248,6 +272,9 @@ int dmell_run_line(const char* line, size_t len)
         return -EINVAL;
     }
 
+    // Release resources for any background jobs that finished since the last line.
+    dmell_bg_reap();
+
     const char* end_ptr = line + len;
     const char* ptr = line;
     int last_exit_code = 0;
@@ -267,8 +294,11 @@ int dmell_run_line(const char* line, size_t len)
             size_t cmd_len = sep_ptr - ptr;
             if( cmd_len > 0 )
             {
-                // Execute the current command
-                int exit_code = dmell_run_command_string( ptr, cmd_len );
+                // A trailing '&' means this command should run in the background
+                // instead of blocking the rest of the line on it.
+                int exit_code = ( sep == dmell_line_sep_background )
+                    ? dmell_run_background( ptr, cmd_len )
+                    : dmell_run_command_string( ptr, cmd_len );
                 result = join_results( last_exit_code, exit_code, prev_sep );
                 last_exit_code = exit_code;
             }

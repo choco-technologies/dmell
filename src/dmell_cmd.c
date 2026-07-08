@@ -236,7 +236,7 @@ static int add_arg( dmell_argv_t* argv, const char* arg, const char* next_arg, c
  * 
  * @param argv Pointer to the dmell_argv_t structure to free
  */
-static void free_argv( dmell_argv_t* argv )
+void dmell_free_argv( dmell_argv_t* argv )
 {
     if( argv == NULL )
     {
@@ -548,7 +548,7 @@ int dmell_run_command_string(const char* cmd, size_t len)
     if( parsed_argv.argc == 0 )
     {
         DMOD_LOG_ERROR("No command found in command string\n");
-        free_argv( &parsed_argv );
+        dmell_free_argv( &parsed_argv );
         return -EINVAL;
     }
 
@@ -559,14 +559,14 @@ int dmell_run_command_string(const char* cmd, size_t len)
     if( result < 0 )
     {
         DMOD_LOG_ERROR("Failed to apply stream redirection for command: %s\n", command_name);
-        free_argv( &parsed_argv );
+        dmell_free_argv( &parsed_argv );
         return result;
     }
 
     result = dmell_run_command( command_name, parsed_argv.argc, parsed_argv.argv );
     dmell_redirect_restore_current_process( &redirect_backup );
 
-    free_argv( &parsed_argv );
+    dmell_free_argv( &parsed_argv );
     return result;
 }
 
@@ -602,7 +602,7 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
         if( result < 0 )
         {
             DMOD_LOG_ERROR("Failed to add argument in dmell_parse_command\n");
-            free_argv( out_argv );
+            dmell_free_argv( out_argv );
             return result;
         }
         ptr = (next_arg != NULL) ? next_arg : end_ptr;
@@ -612,7 +612,7 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
     if( result < 0 )
     {
         DMOD_LOG_ERROR("Failed to parse redirection operators in dmell_parse_command\n");
-        free_argv( out_argv );
+        dmell_free_argv( out_argv );
         return result;
     }
 

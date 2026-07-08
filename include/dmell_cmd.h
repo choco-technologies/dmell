@@ -36,5 +36,6 @@ extern int                  dmell_unregister_command    (const dmell_cmd_t* comm
 extern int                  dmell_run_command           (const char* cmd_name, int argc, char** argv);
 extern int                  dmell_run_command_string    (const char* cmd, size_t len);
 extern int                  dmell_parse_command         ( const char* cmd, size_t len, dmell_argv_t* out_argv );
+extern void                 dmell_free_argv             ( dmell_argv_t* argv );
 
 #endif // DMELL_CMD_H

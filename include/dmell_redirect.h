@@ -150,4 +150,22 @@ extern int dmell_redirect_apply_to_current_process( const dmell_redirect_t* redi
  */
 extern void dmell_redirect_restore_current_process( const dmell_redirect_backup_t* backup );
 
+/**
+ * @brief Snapshot dmell's own process's currently-bound streams, ready to forward to Dmod_SpawnModule.
+ *
+ * Explicitly reads back the bindings applied by dmell_redirect_apply_to_current_process()
+ * (if any) via Dmod_GetStreamRedirections, rather than relying on a spawned child inheriting
+ * them automatically - inheritance is a detail of a particular dmosi backend's process
+ * creation, not a guarantee of the Dmod_Spawn API. Returned Path strings are owned by the
+ * caller (e.g. via Dmod_Free) once the resulting Dmod_StreamRedirections_t is no longer needed.
+ *
+ * Safe to call even when there is nothing to redirect (out_count is set to 0) or when the
+ * platform doesn't support stream introspection at all (same, empty result).
+ *
+ * @param out_entries Buffer to receive the snapshot, must hold at least DMELL_STREAM_COUNT items
+ * @param out_count   Receives the number of entries written to out_entries
+ * @return 0 on success, negative errno value on failure
+ */
+extern int dmell_redirect_snapshot_current_process( Dmod_StreamRedirection_t* out_entries, size_t* out_count );
+
 #endif // DMELL_REDIRECT_H

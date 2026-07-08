@@ -236,11 +236,55 @@ TEST_F(DmellLineTest, ComplexCombinedSeparators)
     // Second: line_fail (1) -> execute next due to ||
     // Third: line_success (0)
     const char* line = "line_success && line_fail || line_success";
-    
+
     int result = dmell_run_line(line, strlen(line));
-    
+
     EXPECT_EQ(result, 0);
     EXPECT_EQ(g_call_count, 3);
+}
+
+/**
+ * @brief A single trailing '&' must still be recognized as AND ('&&') when doubled,
+ * not misparsed as two background separators - this guards the priority ordering
+ * between is_and_separator() and the newer is_background_separator() check.
+ */
+TEST_F(DmellLineTest, DoubleAmpersandStillMeansAnd)
+{
+    const char* line = "line_success && line_success";
+
+    int result = dmell_run_line(line, strlen(line));
+
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(g_call_count, 2);
+}
+
+/**
+ * @brief Background execution ('&') is only supported for external commands - a
+ * registered built-in must be rejected outright, and never actually invoked, since
+ * it has no independent execution context to background it into (see dmell_bg.h).
+ */
+TEST_F(DmellLineTest, BackgroundSeparatorRejectsBuiltin)
+{
+    const char* line = "line_success &";
+
+    int result = dmell_run_line(line, strlen(line));
+
+    EXPECT_LT(result, 0);
+    EXPECT_EQ(g_call_count, 0);
+}
+
+/**
+ * @brief After a backgrounded (rejected) segment, the rest of the line still runs -
+ * background never blocks/aborts the remainder of the line, same as ';'.
+ */
+TEST_F(DmellLineTest, BackgroundSeparatorDoesNotBlockRestOfLine)
+{
+    const char* line = "line_success & line_cmd arg1";
+    g_return_values[0] = 0;
+
+    dmell_run_line(line, strlen(line));
+
+    EXPECT_EQ(g_call_count, 1);
 }
 
 // ===============================================================

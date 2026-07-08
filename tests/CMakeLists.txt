@@ -29,6 +29,7 @@ set(DMELL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/dmell_vars.c
     ${CMAKE_SOURCE_DIR}/src/dmell_cmd.c
     ${CMAKE_SOURCE_DIR}/src/dmell_redirect.c
+    ${CMAKE_SOURCE_DIR}/src/dmell_bg.c
     ${CMAKE_SOURCE_DIR}/src/dmell_line.c
 )
 
@@ -49,14 +50,22 @@ foreach(test_src ${TEST_SOURCES})
         ${DMOD_DIR}/inc
         ${CMAKE_BINARY_DIR}
     )
-    
-    target_link_libraries(${test_name} 
-        gtest 
-        gtest_main 
+
+    # DMOD's weak-API macros (dmod_sal.h) implicitly cast a function pointer through
+    # void* - valid C, but an error under strict C++. These test executables compile
+    # C++ test sources against those C headers, so relax that one check for them.
+    target_compile_options(${test_name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-fpermissive>
+    )
+
+    target_link_libraries(${test_name}
+        gtest
+        gtest_main
         gmock
         dmod_inc
         dmod_common
         dmod_system
+        dmosi
     )
     
     # Add test to CTest
