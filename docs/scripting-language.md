@@ -205,6 +205,39 @@ ls /path/to/directory
 cat file.txt
 ```
 
+### Stream Redirection
+
+Commands - built-in (`echo`, `module`, ...) or external DMOD modules alike -
+can have their standard streams redirected to files, similar to POSIX shells:
+
+```bash
+cat file.txt > out.txt        # stdout to a file (truncated)
+cat file.txt >> out.txt       # stdout to a file (appended)
+grep pattern < input.txt      # stdin from a file
+mycmd 2> errors.txt           # stderr to a file
+mycmd 2>> errors.txt          # stderr appended to a file
+mycmd &> combined.txt         # stdout and stderr to the same file
+mycmd &>> combined.txt        # same, appended
+mycmd > out.txt 2>&1          # stderr follows stdout into out.txt
+mycmd 2>&1 > out.txt          # stderr stays on the terminal, only stdout goes to out.txt
+mycmd 3> log.txt              # dmell-specific: redirect the DMOD "stdlog" stream
+echo "hello" > greeting.txt   # works for built-ins too
+```
+
+Redirection operators are resolved left to right, exactly like a POSIX
+shell: `2>&1` binds stderr to wherever stdout *currently* points, so its
+position relative to `>out.txt` on the command line changes the result (see
+the two `2>&1` examples above).
+
+Under the hood, dmell redirects its own process's streams for the duration of
+the command and restores them exactly afterward (whatever they pointed at
+before, including nothing at all) - built-in commands and external modules
+both write through those same streams, so one mechanism covers everything,
+including redirecting an entire `.dme` script's output by putting the
+redirect on the line that invokes it. Redirection requires the underlying
+platform to support binding a process's streams to files; if it doesn't,
+dmell reports an error rather than silently running the command unredirected.
+
 ## Script Example
 
 ```bash
