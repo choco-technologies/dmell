@@ -1,0 +1,923 @@
+#define DMOD_ENABLE_REGISTRATION    ON
+
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <dmod.h>
+#include "dmell_proc.h"
+#include "dmell_handlers.h"
+#include "dmell_cmd.h"
+#include "dmell_redirect.h"
+#include "dmell_script.h"
+#include "dmell_vars.h"
+#include "dmell_hlp.h"
+
+#define DMELL_FILE_IO_BUFFER_SIZE 512
+
+/**
+ * @brief Handler for the 'echo' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_echo( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)ctx;
+
+    for( int i = 1; i < argc; i++ )
+    {
+        Dmod_Printf("%s", argv[i]);
+        if( i < argc - 1 )
+        {
+            Dmod_Printf(" ");
+        }
+    }
+    Dmod_Printf("\n");
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'write' command.
+ *
+ * Usage: write <file> <content...>
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_write( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)ctx;
+
+    if( argc < 3 )
+    {
+        DMOD_LOG_ERROR("Usage: write <file> <content...>\n");
+        return -EINVAL;
+    }
+
+    const char* file_path = argv[1];
+    if( file_path == NULL || *file_path == '\0' )
+    {
+        DMOD_LOG_ERROR("Invalid file path in write command\n");
+        return -EINVAL;
+    }
+
+    void* file = Dmod_FileOpen( file_path, "w" );
+    if( file == NULL )
+    {
+        DMOD_LOG_ERROR("Failed to open file '%s' for writing\n", file_path);
+        return -ENOENT;
+    }
+
+    for( int i = 2; i < argc; i++ )
+    {
+        const char* chunk = argv[i] ? argv[i] : "";
+        size_t chunk_len = strlen( chunk );
+
+        if( chunk_len > 0 )
+        {
+            size_t bytes_written = Dmod_FileWrite( chunk, 1, chunk_len, file );
+            if( bytes_written != chunk_len )
+            {
+                Dmod_FileClose( file );
+                DMOD_LOG_ERROR("Failed to write content to '%s'\n", file_path);
+                return -EIO;
+            }
+        }
+
+        if( i < argc - 1 )
+        {
+            size_t bytes_written = Dmod_FileWrite( " ", 1, 1, file );
+            if( bytes_written != 1 )
+            {
+                Dmod_FileClose( file );
+                DMOD_LOG_ERROR("Failed to write content to '%s'\n", file_path);
+                return -EIO;
+            }
+        }
+    }
+
+    Dmod_FileClose( file );
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'read' command.
+ *
+ * Usage: read <file>
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_read( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)ctx;
+
+    if( argc < 2 )
+    {
+        DMOD_LOG_ERROR("Usage: read <file>\n");
+        return -EINVAL;
+    }
+
+    const char* file_path = argv[1];
+    if( file_path == NULL || *file_path == '\0' )
+    {
+        DMOD_LOG_ERROR("Invalid file path in read command\n");
+        return -EINVAL;
+    }
+
+    void* file = Dmod_FileOpen( file_path, "r" );
+    if( file == NULL )
+    {
+        DMOD_LOG_ERROR("Failed to open file '%s' for reading\n", file_path);
+        return -ENOENT;
+    }
+
+    char buffer[DMELL_FILE_IO_BUFFER_SIZE];
+    size_t bytes_read = 0;
+    while( (bytes_read = Dmod_FileRead( buffer, 1, sizeof(buffer) - 1, file )) > 0 )
+    {
+        buffer[bytes_read] = '\0';
+        Dmod_Printf("%s", buffer);
+    }
+
+    Dmod_FileClose( file );
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'help' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_help( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)argc;
+    (void)argv;
+    (void)ctx;
+
+    Dmod_Printf("Built-in commands:\n");
+    Dmod_Printf("  help                         Show this help message\n");
+    Dmod_Printf("  echo [args...]               Print arguments\n");
+    Dmod_Printf("  write <file> <content...>    Write content to a file\n");
+    Dmod_Printf("  read <file>                  Read and print file content\n");
+    Dmod_Printf("  set <name=value>             Set a shell variable\n");
+    Dmod_Printf("  export <name=value>          Export an environment variable\n");
+    Dmod_Printf("  unset <name>                 Remove a variable\n");
+    Dmod_Printf("  cd [path]                    Change current directory\n");
+    Dmod_Printf("  pwd                          Print current directory\n");
+    Dmod_Printf("  module ...                   Manage DMOD modules\n");
+    Dmod_Printf("  uptime                       Show system uptime\n");
+    Dmod_Printf("  setloglevel <level>          Set shell log level\n");
+    Dmod_Printf("  exit [code]                  Exit the shell\n");
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'set' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_set( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    if( argc < 1 || argv == NULL )
+    {
+        DMOD_LOG_ERROR("Invalid arguments to dmell_handler_set: %d, %p\n", argc, argv);
+        return -EINVAL;
+    }
+
+    const char* command = argv[0];
+    const char* eval = NULL;
+    if(strcmp(command, "set") == 0 || strcmp(command, "export") == 0)
+    {
+        if(argc < 2)
+        {
+            if(strcmp(command, "export") == 0)
+            {
+                const char* name = Dmod_GetNextEnvName(NULL);
+                while(name != NULL)
+                {
+                    const char* value = Dmod_GetEnv(name);
+                    Dmod_Printf("%s=%s\n", name, value ? value : "");
+                    name = Dmod_GetNextEnvName(name);
+                }
+                return 0;
+            }
+            DMOD_LOG_ERROR("Missing evaluation for '%s'\n", command);
+            return -EINVAL;
+        }
+        eval = argv[1];
+    }
+    else
+    {
+        eval = argv[0];
+    }
+    const char* ptr = eval;
+    while(ptr != NULL && *ptr != '=' && *ptr != '\0')
+    {
+        ptr++;
+    }
+    if(*ptr != '=')
+    {
+        DMOD_LOG_ERROR("Invalid variable assignment in dmell_handler_set: %s\n", eval);
+        return -EINVAL;
+    }
+
+    size_t name_len = ptr - eval;
+    ptr++;
+    if(name_len <= 0)
+    {
+        DMOD_LOG_ERROR("Invalid variable name in dmell_handler_set: %s\n", eval);
+        return -EINVAL;
+    }
+    char var_name[name_len + 1];
+    strncpy(var_name, eval, name_len);
+    var_name[name_len] = '\0';
+    const char* var_value = ptr;
+    if(strcmp(command, "export") == 0)
+    {
+        int result = Dmod_SetEnv( var_name, var_value, 1 );
+        if( result != 0 )
+        {
+            DMOD_LOG_ERROR("Failed to set environment variable in dmell_handler_export: %s=%s\n", var_name, var_value);
+            return result;
+        }
+    }
+    else
+    {
+        ctx->variables = (void*)dmell_set_variable( (dmell_var_t*)ctx->variables, var_name, var_value );
+    }
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'unset' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_unset( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    if( argc < 2 )
+    {
+        DMOD_LOG_ERROR("Missing variable name for 'unset' command\n");
+        return -EINVAL;
+    }
+
+    for( int i = 1; i < argc; i++ )
+    {
+        const char* var_name = argv[i];
+        if( var_name == NULL || strlen(var_name) == 0 )
+        {
+            DMOD_LOG_ERROR("Invalid variable name in unset: %s\n", var_name ? var_name : "(null)");
+            continue;
+        }
+        ctx->variables = (void*)dmell_remove_variable( (dmell_var_t*)ctx->variables, var_name );
+    }
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'cd' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_cd( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)ctx;
+
+    const char* path = NULL;
+
+    if( argc < 2 )
+    {
+        // No argument provided, change to home directory
+        path = Dmod_GetEnv("HOME");
+        if( path == NULL )
+        {
+            DMOD_LOG_ERROR("HOME environment variable not set\n");
+            return -EINVAL;
+        }
+    }
+    else
+    {
+        path = argv[1];
+    }
+
+    if( path == NULL || strlen(path) == 0 )
+    {
+        DMOD_LOG_ERROR("Invalid directory path\n");
+        return -EINVAL;
+    }
+
+    int result = Dmod_ChDir(path);
+    if( result != 0 )
+    {
+        DMOD_LOG_ERROR("Failed to change directory to '%s': %d\n", path, result);
+        return result;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'pwd' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_pwd( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)argc;
+    (void)argv;
+    (void)ctx;
+
+    char cwd[1024];  // Use a reasonable buffer size for path
+
+    if( Dmod_GetCwd(cwd, sizeof(cwd)) == NULL )
+    {
+        DMOD_LOG_ERROR("Failed to get current working directory\n");
+        return -1;
+    }
+
+    Dmod_Printf("%s\n", cwd);
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'exit' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_exit( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    int exit_code = 0;
+
+    if( argc >= 2 )
+    {
+        // Parse exit code from argument
+        long code = 0;
+        const char* str = argv[1];
+        char* endptr = NULL;
+
+        // Simple manual conversion from string to integer
+        while (*str != '\0' && *str >= '0' && *str <= '9') {
+            code = code * 10 + (*str - '0');
+            str++;
+        }
+        endptr = (char*)str;
+
+        if( *endptr != '\0' || code < INT_MIN || code > INT_MAX )
+        {
+            DMOD_LOG_ERROR("Invalid exit code: %s\n", argv[1]);
+            exit_code = 2;
+        }
+        else
+        {
+            exit_code = (int)code;
+        }
+    }
+    else
+    {
+        // Use last command's exit code if no argument provided
+        exit_code = ctx->last_exit_code;
+    }
+
+    // Signal exit by returning a special value (negative for error handling)
+    return exit_code == 0 ? -255 : -exit_code;
+}
+
+/**
+ * @brief Handler for the 'uptime' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_uptime( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)argc;
+    (void)argv;
+    (void)ctx;
+
+    Dmod_Timestamp_t uptime_ms = Dmod_GetUptime();
+
+    uint64_t total_seconds = uptime_ms / 1000;
+    uint64_t ms            = uptime_ms % 1000;
+    uint64_t seconds       = total_seconds % 60;
+    uint64_t total_minutes = total_seconds / 60;
+    uint64_t minutes       = total_minutes % 60;
+    uint64_t total_hours   = total_minutes / 60;
+    uint64_t hours         = total_hours % 24;
+    uint64_t days          = total_hours / 24;
+
+    if( days > 0 )
+    {
+        Dmod_Printf("up %llu day%s, %02llu:%02llu:%02llu.%03llu\n",
+            (unsigned long long)days,
+            days == 1 ? "" : "s",
+            (unsigned long long)hours,
+            (unsigned long long)minutes,
+            (unsigned long long)seconds,
+            (unsigned long long)ms);
+    }
+    else
+    {
+        Dmod_Printf("up %02llu:%02llu:%02llu.%03llu\n",
+            (unsigned long long)hours,
+            (unsigned long long)minutes,
+            (unsigned long long)seconds,
+            (unsigned long long)ms);
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Handler for the 'setloglevel' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_setloglevel( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)ctx;
+
+    if( argc < 2 )
+    {
+        DMOD_LOG_ERROR("Usage: setloglevel <verbose|info|warning|error>\n");
+        return -EINVAL;
+    }
+
+    const char* level = argv[1];
+    Dmod_LogLevel_t log_level;
+
+    if( strcmp( level, "verbose" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Verbose;
+    }
+    else if( strcmp( level, "info" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Info;
+    }
+    else if( strcmp( level, "warning" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Warn;
+    }
+    else if( strcmp( level, "error" ) == 0 )
+    {
+        log_level = Dmod_LogLevel_Error;
+    }
+    else
+    {
+        DMOD_LOG_ERROR("Invalid log level: %s. Use verbose, info, warning, or error.\n", level);
+        return -EINVAL;
+    }
+
+    Dmod_SetLogLevel( log_level );
+    return 0;
+}
+
+/**
+ * @brief Helper function to read the shebang line and extract the interpreter.
+ *
+ * @param file_name Name of the script file
+ * @param buffer Buffer to store the interpreter path
+ * @param buffer_size Size of the buffer
+ * @return bool True if shebang found and interpreter extracted, false otherwise
+ */
+static bool get_shebang_interpreter(const char* file_name, char* buffer, size_t buffer_size)
+{
+    void* file = Dmod_FileOpen(file_name, "r");
+    if(file == NULL)
+    {
+        return false;
+    }
+
+    char mark[3] = {0};
+    size_t read_bytes = Dmod_FileRead(buffer, 1, 2, file);
+    if(read_bytes < 2 || mark[0] != '#' || mark[1] != '!')
+    {
+        Dmod_FileClose(file);
+        return false;
+    }
+
+    read_bytes = Dmod_FileRead(buffer, 1, buffer_size - 1, file);
+    Dmod_FileClose(file);
+    buffer[read_bytes] = '\0';
+    return true;
+}
+
+/**
+ * @brief Helper function to run a shebang interpreter with the script file.
+ *
+ * @param interpreter Path to the interpreter
+ * @param script_file Path to the script file
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @param ctx Per-session context, forwarded to the interpreter command
+ * @return int Exit code
+ */
+static int run_shebang( char* interpreter, char* script_file, int argc, char** argv, dmell_ctx_t* ctx )
+{
+    int new_argc = argc + 2;
+    char** new_argv = Dmod_Malloc( sizeof(char*) * (new_argc + 2) );
+    if( new_argv == NULL )
+    {
+        DMOD_LOG_ERROR("Memory allocation failed in run_shebang for new_argv\n");
+        return -ENOMEM;
+    }
+
+    if(strcmp(interpreter, script_file) == 0)
+    {
+        DMOD_LOG_ERROR("Circular dependency detected: Interpreter and script file cannot be the same: %s\n", interpreter);
+        Dmod_Free( new_argv );
+        return -EINVAL;
+    }
+
+    new_argv[0] = interpreter;
+    new_argv[1] = script_file;
+    for( int i = 1; i < argc; i++ )
+    {
+        new_argv[i + 1] = argv[i];
+    }
+
+    int result = dmell_run_command( ctx, interpreter, new_argc, new_argv );
+    Dmod_Free( new_argv );
+    return result;
+}
+
+/**
+ * @brief Helper function to spawn a module and wait for its completion.
+ *
+ * Falls back to Dmod_SpawnModule when Dmod_RunModule fails with -ENOMEM,
+ * then waits for the spawned process to finish using the dmosi process API.
+ *
+ * By the time this runs, dmell_run_command_string() has already applied any
+ * requested redirection to dmell's own process (see dmell_redirect.h). Rather
+ * than assuming the spawned child inherits that automatically - which is an
+ * implementation detail of a particular dmosi backend, not a guarantee of the
+ * Dmod_Spawn API - this reads dmell's own current stream bindings back via
+ * Dmod_GetStreamRedirections() and forwards them explicitly, so redirection
+ * works the same regardless of what the backend does on its own.
+ *
+ * @param file_name Path or name of the module to spawn
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code of the spawned process, or negative error code on failure
+ */
+static int spawn_and_wait( const char* file_name, int argc, char** argv )
+{
+    if( !Dmod_IsFunctionConnected( (void*)Dmod_SpawnModule ) )
+    {
+        DMOD_LOG_ERROR("Dmod_SpawnModule is not available and Dmod_RunModule failed with -ENOMEM\n");
+        return -ENOMEM;
+    }
+
+    Dmod_StreamRedirection_t entries[DMELL_STREAM_COUNT];
+    Dmod_StreamRedirections_t streams = { .Entries = entries, .Count = 0 };
+
+    int result = dmell_redirect_snapshot_current_process( entries, &streams.Count );
+    if( result < 0 )
+    {
+        DMOD_LOG_ERROR("Failed to read current process stream bindings before spawning\n");
+        return result;
+    }
+
+    int pid = Dmod_SpawnModule( file_name, argc, argv, streams.Count > 0 ? &streams : NULL );
+
+    for( size_t i = 0; i < streams.Count; i++ )
+    {
+        Dmod_Free( (void*)entries[i].Path );
+    }
+
+    if( pid < 0 )
+    {
+        return pid;
+    }
+
+    dmosi_process_t proc = dmell_proc_find_by_id( (dmosi_process_id_t)pid );
+    if( proc == NULL )
+    {
+        return -ESRCH;
+    }
+
+    dmell_proc_wait( proc, -1 );
+    int exit_status = dmell_proc_get_exit_status( proc );
+    dmell_proc_destroy( proc );
+    return exit_status;
+}
+
+/**
+ * @brief Default handler for unknown commands.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_default( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    if( argc < 1 )
+    {
+        DMOD_LOG_ERROR("No command provided to default handler\n");
+        return -EINVAL;
+    }
+
+    // check if it is setting an environment variable
+    if(strchr(argv[0], '=') != NULL)
+    {
+        return dmell_handler_set( argc, argv, ctx );
+    }
+    else
+    {
+        // check if it is a file execution
+        char* file_name = argv[0];
+        int result;
+        if(Dmod_FileAvailable(file_name))
+        {
+            char interpreter[256] = {0};
+            if(get_shebang_interpreter(file_name, interpreter, sizeof(interpreter)))
+            {
+                return run_shebang(interpreter, file_name, argc, argv, ctx);
+            }
+            else if(dmell_has_dme_extension(file_name))
+            {
+                return dmell_run_script_file(ctx, file_name, argc, argv);
+            }
+            else
+            {
+                result = Dmod_RunModule( file_name, argc, argv );
+            }
+        }
+        else
+        {
+            result = Dmod_RunModule( file_name, argc, argv );
+        }
+
+        if( result == -ENOMEM )
+        {
+            result = spawn_and_wait( file_name, argc, argv );
+        }
+
+        return result;
+    }
+}
+
+/**
+ * @brief Handler for the 'module' command.
+ *
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code
+ */
+static int dmell_handler_module( int argc, char** argv, dmell_ctx_t* ctx )
+{
+    (void)ctx;
+
+    if( argc < 2 )
+    {
+        Dmod_Printf("Usage: module <subcommand> [args...]\n");
+        Dmod_Printf("Subcommands:\n");
+        Dmod_Printf("  load <name>      Load a module\n");
+        Dmod_Printf("  unload <name>    Unload a module\n");
+        Dmod_Printf("  enable <name>    Enable a module\n");
+        Dmod_Printf("  disable <name>   Disable a module\n");
+        Dmod_Printf("  info <name>      Show module information\n");
+        Dmod_Printf("  list             List all modules\n");
+        return -EINVAL;
+    }
+
+    const char* subcommand = argv[1];
+
+    if( strcmp( subcommand, "load" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module load <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        Dmod_Context_t* mctx = Dmod_LoadModuleByName( module_name );
+        if( mctx == NULL )
+        {
+            Dmod_Printf("Failed to load module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' loaded successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "unload" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module unload <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        bool result = Dmod_UnloadModule( module_name, false );
+        if( !result )
+        {
+            Dmod_Printf("Failed to unload module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' unloaded successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "enable" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module enable <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        bool result = Dmod_EnableModule( module_name, false, NULL );
+        if( !result )
+        {
+            Dmod_Printf("Failed to enable module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' enabled successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "disable" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module disable <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+        bool result = Dmod_DisableModule( module_name, false );
+        if( !result )
+        {
+            Dmod_Printf("Failed to disable module: %s\n", module_name);
+            return -1;
+        }
+        Dmod_Printf("Module '%s' disabled successfully\n", module_name);
+        return 0;
+    }
+    else if( strcmp( subcommand, "info" ) == 0 )
+    {
+        if( argc < 3 )
+        {
+            Dmod_Printf("Usage: module info <name>\n");
+            return -EINVAL;
+        }
+        const char* module_name = argv[2];
+
+        // Iterate through modules to find the requested one
+        Dmod_ModuleNode_t node = {0};
+        bool found = false;
+
+        if( Dmod_OpenModules( &node ) )
+        {
+            while( Dmod_ReadNextModule( &node ) )
+            {
+                if( node.header.Name[0] != '\0' && strcmp( node.header.Name, module_name ) == 0 )
+                {
+                    found = true;
+                    Dmod_Printf("Module Information:\n");
+                    Dmod_Printf("  Name:     %s\n", node.header.Name);
+                    Dmod_Printf("  Version:  %s\n", node.header.Version);
+                    Dmod_Printf("  Author:   %s\n", node.header.Author);
+                    Dmod_Printf("  Path:     %s\n", node.path);
+
+                    // Read module header to get more information
+                    Dmod_Printf("  Arch:     %s\n", node.header.Arch);
+                    Dmod_Printf("  CPU:      %s\n", node.header.CpuName);
+                    Dmod_Printf("  Priority: %u\n", node.header.Priority);
+                    Dmod_Printf("  Stack:    %llu bytes\n", (unsigned long long)node.header.RequiredStackSize);
+
+                    // Read required modules
+                    Dmod_RequiredModule_t requiredModules[DMOD_MAX_REQUIRED_MODULES] = {0};
+
+                    if( Dmod_ReadRequiredModules( node.path, requiredModules, DMOD_MAX_REQUIRED_MODULES ) )
+                    {
+                        bool has_required = false;
+                        for( int i = 0; i < DMOD_MAX_REQUIRED_MODULES; i++ )
+                        {
+                            if( requiredModules[i].Name[0] != '\0' )
+                            {
+                                if( !has_required )
+                                {
+                                    Dmod_Printf("  Required modules:\n");
+                                    has_required = true;
+                                }
+                                Dmod_Printf("    - %s (v%s)%s\n",
+                                    requiredModules[i].Name,
+                                    requiredModules[i].Version,
+                                    requiredModules[i].SystemModule ? " [system]" : "");
+                            }
+                        }
+                        if( !has_required )
+                        {
+                            Dmod_Printf("  Required modules: none\n");
+                        }
+                    }
+                    break;
+                }
+            }
+
+            Dmod_CloseModules( &node );
+        }
+
+        if( !found )
+        {
+            Dmod_Printf("Module not found: %s\n", module_name);
+            return -1;
+        }
+        return 0;
+    }
+    else if( strcmp( subcommand, "list" ) == 0 )
+    {
+        Dmod_ModuleNode_t node = {0};
+        bool has_modules = false;
+
+        if( Dmod_OpenModules( &node ) )
+        {
+            Dmod_Printf("Available modules:\n");
+            Dmod_Printf("%-30s %-15s %-18s %-40s\n", "Name", "Version", "Text Addr", "Path");
+            Dmod_Printf("---------------------------------------------------------------------------------------------\n");
+
+            while( Dmod_ReadNextModule( &node ) )
+            {
+                if( node.header.Name[0] != '\0' )
+                {
+                    has_modules = true;
+                    void* text_addr = Dmod_GetGdbModuleAddress( Dmod_GetModuleContext( node.header.Name ) );
+                    Dmod_Printf("%-30s %-15s %-18p %-40s\n",
+                        node.header.Name,
+                        node.header.Version,
+                        text_addr,
+                        node.path);
+                }
+            }
+
+            Dmod_CloseModules( &node );
+        }
+
+        if( !has_modules )
+        {
+            Dmod_Printf("No modules available\n");
+        }
+        return 0;
+    }
+    else
+    {
+        Dmod_Printf("Unknown subcommand: %s\n", subcommand);
+        Dmod_Printf("Use 'module' without arguments to see available subcommands\n");
+        return -EINVAL;
+    }
+}
+
+int dmell_register_handlers( void )
+{
+    // Kept only to give dependants a real call into this module - see the
+    // doc comment on the declaration in dmell_handlers.h. All actual
+    // registration work happens in dmod_init() below.
+    return 0;
+}
+
+int dmod_init(const Dmod_Config_t *Config)
+{
+    (void)Config;
+
+    // Set default log level to warning
+    Dmod_SetLogLevel( Dmod_LogLevel_Warn );
+
+    dmell_register_command_handler( "echo", dmell_handler_echo );
+    dmell_register_command_handler( "write", dmell_handler_write );
+    dmell_register_command_handler( "read", dmell_handler_read );
+    dmell_register_command_handler( "help", dmell_handler_help );
+    dmell_register_command_handler( "set", dmell_handler_set );
+    dmell_register_command_handler( "unset", dmell_handler_unset );
+    dmell_register_command_handler( "export", dmell_handler_set );
+    dmell_register_command_handler( "cd", dmell_handler_cd );
+    dmell_register_command_handler( "pwd", dmell_handler_pwd );
+    dmell_register_command_handler( "exit", dmell_handler_exit );
+    dmell_register_command_handler( "setloglevel", dmell_handler_setloglevel );
+    dmell_register_command_handler( "module", dmell_handler_module );
+    dmell_register_command_handler( "uptime", dmell_handler_uptime );
+
+    dmell_set_default_handler( dmell_handler_default );
+    return 0;
+}
+
+int dmod_deinit(void)
+{
+    return 0;
+}

@@ -9,6 +9,11 @@ cmake_minimum_required(VERSION 3.18)
 option(DMELL_BUILD_TESTS "Build unit tests" OFF)
 
 # ======================================================================
+#               For VS Code
+# ======================================================================
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ======================================================================
 #               DMOD FFS
 # ======================================================================
 # Allow version to be passed as a parameter, default to 0.1
@@ -38,18 +43,14 @@ set(DMOD_ENABLE_MEMORY_ANALYSIS OFF CACHE BOOL "Enable memory analysis during bu
 
 FetchContent_MakeAvailable(dmod)
 
-# Set DMOD_DIR early so dmosi's CMakeLists.txt can find paths.cmake
+# Set DMOD_DIR early
 set(DMOD_DIR ${dmod_SOURCE_DIR} CACHE PATH "DMOD source directory")
 
-# ======================================================================
-#               Fetch DMOSI
-# ======================================================================
-FetchContent_Declare(
-    dmosi
-    GIT_REPOSITORY https://github.com/choco-technologies/dmosi.git
-    GIT_TAG        bb981a55bf9191d218baf5323b8bb7e21cf7f7b6
-)
-FetchContent_MakeAvailable(dmosi)
+# Note: dmosi is NOT fetched here. It is an external DMOD module, consumed
+# via dmod_link_modules() by whichever of our own modules actually needs it
+# (see lib/dmell_bg and lib/dmell_handlers) - the same way any other external
+# module dependency is declared, rather than cloning its source into our own
+# build.
 
 project(dmell
     VERSION ${DMOD_MODULE_VERSION}
@@ -65,13 +66,43 @@ include(${DMOD_DIR}/paths.cmake)
 dmod_setup_external_module()
 
 # ======================================================================
+#               Standalone libraries (shared across dmell instances)
+# ======================================================================
+# Split out one directory at a time - see the library split plan for the
+# target dependency graph. dmod_add_library()'s link step (-nostdlib, custom
+# module.ld, ...) only works under DMOD_MODE=DMOD_MODULE, same as the dmell
+# executable and command modules below - dmod_test.h test modules (tests/)
+# share this same build, they are not a separate host-native build.
+#
+# DMELL_PROC_FAKE controls lib/dmell_proc, the one module allowed to call
+# dmosi's process API directly: real dmosi requires a live backend to be
+# *enabled* by whatever loads the module (see the split plan), which the
+# generic dmod_loader used to run dod_test.h test modules does not provide.
+# Tied to DMELL_BUILD_TESTS so test builds get a simulated backend instead,
+# without dmell_bg/dmell_handlers themselves ever needing to change.
+set(DMELL_PROC_FAKE ${DMELL_BUILD_TESTS})
+
+if(DMOD_MODE STREQUAL "DMOD_MODULE")
+    add_subdirectory(lib/dmell_vars)
+    add_subdirectory(lib/dmell_redirect)
+    add_subdirectory(lib/dmell_proc)
+    add_subdirectory(lib/dmell_cmd)
+    add_subdirectory(lib/dmell_bg)
+    add_subdirectory(lib/dmell_line)
+    add_subdirectory(lib/dmell_script)
+    add_subdirectory(lib/dmell_handlers)
+    add_subdirectory(lib/dmell_ia)
+    add_subdirectory(lib/dmell_core)
+endif()
+
+# ======================================================================
 #               Build modules only when not in test mode
 # ======================================================================
 if(NOT DMELL_BUILD_TESTS)
     # ======================================================================
     #               DMFFS Module Configuration
     # ======================================================================
-    # Name of the module 
+    # Name of the module
     set(DMOD_MODULE_NAME        dmell)
 
     # Version is already set above and used in project()
@@ -92,21 +123,14 @@ if(NOT DMELL_BUILD_TESTS)
     dmod_add_executable(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
         # List of source files - can include C and C++ files
         src/dmell.c
-        src/dmell_cmd.c
-        src/dmell_redirect.c
-        src/dmell_bg.c
-        src/dmell_line.c
-        src/dmell_script.c
-        src/dmell_vars.c
-        src/dmell_ia.c
-        src/dmell_handlers.c
     )
 
-    target_include_directories(${DMOD_MODULE_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-    )
-
-    target_link_libraries(${DMOD_MODULE_NAME} dmosi_if)
+    # dmell only ever talks to the dmell_core facade - everything else
+    # (dmell_ia, dmell_script, dmell_handlers, ...) is dmell_core's own
+    # required-module dependency, not dmell's. That is deliberate: it is the
+    # one place that will decide what to load lazily once dmod supports it,
+    # without dmell's own executable ever needing to change again.
+    target_link_libraries(${DMOD_MODULE_NAME} dmell_core_if)
 
     # ======================================================================
     #               Command Modules

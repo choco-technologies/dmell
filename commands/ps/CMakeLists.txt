@@ -14,5 +14,6 @@ dmod_add_executable(${PS_MODULE_NAME} ${DMOD_MODULE_VERSION}
     ps.c
 )
 
-# Link against dmosi_if to get its include directories and API declarations
-target_link_libraries(${PS_MODULE_NAME} dmosi_if)
+# dmosi is an external DMOD module (process management) - link its headers
+# via dmf-get instead of vendoring its source into our own build.
+dmod_link_modules(${PS_MODULE_NAME} dmosi)

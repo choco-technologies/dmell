@@ -2,6 +2,8 @@
 #define DMELL_HLP_H
 
 #include <stddef.h>
+#include <string.h>
+#include <stdbool.h>
 
 /**
  * @brief Helper function to skip whitespaces in a command string.
@@ -50,6 +52,22 @@ static inline size_t dmell_add_to_string( char* dst, char* end_dst, const char* 
         value++;
     }
     return len;
+}
+
+/**
+ * @brief Helper function to check if a file name has the dmell script extension (.dme).
+ *
+ * Shared by dmell_handlers (deciding how to run a file argument) and dmell_bg
+ * (rejecting an attempt to background a .dme script, which has no independent
+ * execution context to hand off).
+ *
+ * @param file_name Name of the file
+ * @return true if the file name ends in ".dme"
+ */
+static inline bool dmell_has_dme_extension( const char* file_name )
+{
+    size_t len = strlen( file_name );
+    return ( len > 4 && strcmp( &file_name[len - 4], ".dme" ) == 0 );
 }
 
 #endif // DMELL_HLP_H

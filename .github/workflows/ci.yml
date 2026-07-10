@@ -28,6 +28,11 @@ jobs:
         run: |
           mkdir -p build-tests
           cd build-tests
-          cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMELL_BUILD_TESTS=ON
+          # Tests are real dmod_add_test() modules (see tests/), sharing the
+          # same DMOD_MODE=DMOD_MODULE linking model as dmell's own library
+          # modules - not a separate host-native/gtest build. They must be
+          # built for the runner's own architecture so dmod_loader can
+          # actually execute them.
+          cmake .. -DDMOD_TOOLS_NAME=arch/x86_64 -DDMELL_BUILD_TESTS=ON
           cmake --build .
           ctest --output-on-failure

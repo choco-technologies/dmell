@@ -113,6 +113,23 @@ jobs:
               cp $DMF_DIR/${cmd}.dmd release_package/
             fi
           done
+
+          # Copy dmell's own library modules - dynamically discover from lib directory
+          # (dmell_core, dmell_handlers, dmell_ia, dmell_script, dmell_line, dmell_bg,
+          # dmell_cmd, dmell_redirect, dmell_vars - dmell requires these at load time,
+          # see lib/*/CMakeLists.txt)
+          for lib_dir in lib/*/; do
+            lib=$(basename "$lib_dir")
+            if [ -f $DMF_DIR/${lib}.dmf ]; then
+              cp $DMF_DIR/${lib}.dmf release_package/
+            fi
+            if [ -f $DMFC_DIR/${lib}.dmfc ]; then
+              cp $DMFC_DIR/${lib}.dmfc release_package/
+            fi
+            if [ -f $DMF_DIR/${lib}.dmd ]; then
+              cp $DMF_DIR/${lib}.dmd release_package/
+            fi
+          done
                     
           # Copy documentation and license
           cp README.md release_package/
@@ -181,6 +198,12 @@ jobs:
           for cmd_dir in commands/*/; do
             cmd=$(basename "$cmd_dir")
             echo "\$version-available $cmd $VERSIONS" >> versions.dmm
+          done
+
+          # Add $version-available directives for dmell's own library modules
+          for lib_dir in lib/*/; do
+            lib=$(basename "$lib_dir")
+            echo "\$version-available $lib $VERSIONS" >> versions.dmm
           done
           
           echo "Generated versions.dmm:"
