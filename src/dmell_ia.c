@@ -613,7 +613,7 @@ static char* read_line( size_t* out_len )
     while( true )
     {
         int c = Dmod_Getc();
-        if( c == EOF || c == '\n' )
+        if( c == EOF || c == '\n' || c == '\r' )
         {
             buffer[position] = '\0';
             Dmod_Printf("\n");

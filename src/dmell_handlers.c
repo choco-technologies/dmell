@@ -838,17 +838,19 @@ int dmell_handler_module( int argc, char** argv )
         if( Dmod_OpenModules( &node ) )
         {
             Dmod_Printf("Available modules:\n");
-            Dmod_Printf("%-30s %-15s %-40s\n", "Name", "Version", "Path");
+            Dmod_Printf("%-30s %-15s %-18s %-40s\n", "Name", "Version", "Text Addr", "Path");
             Dmod_Printf("---------------------------------------------------------------------------------------------\n");
-            
+
             while( Dmod_ReadNextModule( &node ) )
             {
                 if( node.header.Name[0] != '\0' )
                 {
                     has_modules = true;
-                    Dmod_Printf("%-30s %-15s %-40s\n",
+                    void* text_addr = Dmod_GetGdbModuleAddress( Dmod_GetModuleContext( node.header.Name ) );
+                    Dmod_Printf("%-30s %-15s %-18p %-40s\n",
                         node.header.Name,
                         node.header.Version,
+                        text_addr,
                         node.path);
                 }
             }
