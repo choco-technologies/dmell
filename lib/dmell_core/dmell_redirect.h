@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <dmod.h>
-#include "dmell_redirect_defs.h"
 
 /**
  * @file dmell_redirect.h
@@ -84,7 +83,7 @@ typedef struct
  * @param out   Match result, valid only when the return value is true
  * @return true if the token is a redirection operator
  */
-dmod_dmell_redirect_global_api( 1.0, bool, dmell_redirect_match_token, (const char* token, dmell_redirect_match_t* out) );
+extern bool dmell_redirect_match_token( const char* token, dmell_redirect_match_t* out );
 
 /**
  * @brief Free a redirect array previously built while parsing a command.
@@ -92,7 +91,7 @@ dmod_dmell_redirect_global_api( 1.0, bool, dmell_redirect_match_token, (const ch
  * @param redirects Array to free (may be NULL)
  * @param count     Number of entries in the array
  */
-dmod_dmell_redirect_global_api( 1.0, void, dmell_redirect_free, (dmell_redirect_t* redirects, size_t count) );
+extern void dmell_redirect_free( dmell_redirect_t* redirects, size_t count );
 
 /**
  * @brief Resolve parsed redirections into DMOD stream redirection entries.
@@ -109,8 +108,8 @@ dmod_dmell_redirect_global_api( 1.0, void, dmell_redirect_free, (dmell_redirect_
  * @param out_count   Receives the number of entries written to out_entries
  * @return 0 on success, negative errno value if a target file could not be prepared
  */
-dmod_dmell_redirect_global_api( 1.0, int, dmell_redirect_resolve,
-    (const dmell_redirect_t* redirects, size_t count, Dmod_StreamRedirection_t* out_entries, size_t* out_count) );
+extern int dmell_redirect_resolve( const dmell_redirect_t* redirects, size_t count,
+                                    Dmod_StreamRedirection_t* out_entries, size_t* out_count );
 
 /**
  * @brief Snapshot needed to restore dmell's own process streams after a temporary redirect.
@@ -139,8 +138,8 @@ typedef struct
  * @param out_backup Filled in on success; pass to dmell_redirect_restore_current_process() afterwards
  * @return 0 on success, negative errno value on failure (nothing left applied in that case)
  */
-dmod_dmell_redirect_global_api( 1.0, int, dmell_redirect_apply_to_current_process,
-    (const dmell_redirect_t* redirects, size_t count, dmell_redirect_backup_t* out_backup) );
+extern int dmell_redirect_apply_to_current_process( const dmell_redirect_t* redirects, size_t count,
+                                                      dmell_redirect_backup_t* out_backup );
 
 /**
  * @brief Undo dmell_redirect_apply_to_current_process(), restoring prior stream bindings.
@@ -149,7 +148,7 @@ dmod_dmell_redirect_global_api( 1.0, int, dmell_redirect_apply_to_current_proces
  *
  * @param backup Backup produced by a matching dmell_redirect_apply_to_current_process() call
  */
-dmod_dmell_redirect_global_api( 1.0, void, dmell_redirect_restore_current_process, (const dmell_redirect_backup_t* backup) );
+extern void dmell_redirect_restore_current_process( const dmell_redirect_backup_t* backup );
 
 /**
  * @brief Snapshot dmell's own process's currently-bound streams, ready to forward to Dmod_SpawnModule.
@@ -167,7 +166,6 @@ dmod_dmell_redirect_global_api( 1.0, void, dmell_redirect_restore_current_proces
  * @param out_count   Receives the number of entries written to out_entries
  * @return 0 on success, negative errno value on failure
  */
-dmod_dmell_redirect_global_api( 1.0, int, dmell_redirect_snapshot_current_process,
-    (Dmod_StreamRedirection_t* out_entries, size_t* out_count) );
+extern int dmell_redirect_snapshot_current_process( Dmod_StreamRedirection_t* out_entries, size_t* out_count );
 
 #endif // DMELL_REDIRECT_H

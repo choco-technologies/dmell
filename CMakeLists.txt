@@ -47,8 +47,7 @@ FetchContent_MakeAvailable(dmod)
 set(DMOD_DIR ${dmod_SOURCE_DIR} CACHE PATH "DMOD source directory")
 
 # Note: dmosi is NOT fetched here. It is an external DMOD module, consumed
-# via dmod_link_modules() by whichever of our own modules actually needs it
-# (see lib/dmell_bg and lib/dmell_handlers) - the same way any other external
+# via dmod_link_modules() in lib/dmell_core - the same way any other external
 # module dependency is declared, rather than cloning its source into our own
 # build.
 
@@ -66,32 +65,23 @@ include(${DMOD_DIR}/paths.cmake)
 dmod_setup_external_module()
 
 # ======================================================================
-#               Standalone libraries (shared across dmell instances)
+#               dmell_core (shared across dmell instances)
 # ======================================================================
-# Split out one directory at a time - see the library split plan for the
-# target dependency graph. dmod_add_library()'s link step (-nostdlib, custom
-# module.ld, ...) only works under DMOD_MODE=DMOD_MODULE, same as the dmell
-# executable and command modules below - dmod_test.h test modules (tests/)
-# share this same build, they are not a separate host-native build.
+# All of dmell's own logic lives in this one library module - see
+# lib/dmell_core/CMakeLists.txt for why it isn't split further right now.
+# dmod_add_library()'s link step (-nostdlib, custom module.ld, ...) only
+# works under DMOD_MODE=DMOD_MODULE, same as the dmell executable and
+# command modules below - dmod_test.h test modules (tests/) share this same
+# build, they are not a separate host-native build.
 #
-# DMELL_PROC_FAKE controls lib/dmell_proc, the one module allowed to call
-# dmosi's process API directly: real dmosi requires a live backend to be
-# *enabled* by whatever loads the module (see the split plan), which the
-# generic dmod_loader used to run dod_test.h test modules does not provide.
-# Tied to DMELL_BUILD_TESTS so test builds get a simulated backend instead,
-# without dmell_bg/dmell_handlers themselves ever needing to change.
+# DMELL_PROC_FAKE controls which process backend dmell_core's dmell_proc.c
+# calls into: real dmosi requires a live backend to be *enabled* by whatever
+# loads the module (see the split plan), which the generic dmod_loader used
+# to run dmod_test.h test modules does not provide. Tied to DMELL_BUILD_TESTS
+# so test builds get a simulated backend instead.
 set(DMELL_PROC_FAKE ${DMELL_BUILD_TESTS})
 
 if(DMOD_MODE STREQUAL "DMOD_MODULE")
-    add_subdirectory(lib/dmell_vars)
-    add_subdirectory(lib/dmell_redirect)
-    add_subdirectory(lib/dmell_proc)
-    add_subdirectory(lib/dmell_cmd)
-    add_subdirectory(lib/dmell_bg)
-    add_subdirectory(lib/dmell_line)
-    add_subdirectory(lib/dmell_script)
-    add_subdirectory(lib/dmell_handlers)
-    add_subdirectory(lib/dmell_ia)
     add_subdirectory(lib/dmell_core)
 endif()
 

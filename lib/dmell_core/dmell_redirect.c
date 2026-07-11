@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <errno.h>
 #include <string.h>
 #include <dmod.h>
@@ -293,15 +291,4 @@ int dmell_redirect_snapshot_current_process( Dmod_StreamRedirection_t* out_entri
     }
 
     return Dmod_GetStreamRedirections( Dmod_GetCurrentPid(), out_entries, DMELL_STREAM_COUNT, out_count );
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
-    return 0;
 }

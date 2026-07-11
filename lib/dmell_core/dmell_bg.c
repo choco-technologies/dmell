@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <errno.h>
 #include <string.h>
 #include <dmod.h>
@@ -166,16 +164,5 @@ int dmell_run_background( dmell_ctx_t* ctx, const char* cmd, size_t len )
         return 0;
     }
 
-    return 0;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
     return 0;
 }

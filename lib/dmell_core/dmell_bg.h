@@ -2,8 +2,6 @@
 #define DMELL_BG_H
 
 #include <stddef.h>
-#include "dmod.h"
-#include "dmell_bg_defs.h"
 #include "dmell_cmd.h"
 
 /**
@@ -16,10 +14,10 @@
  * to hand off without blocking the shell, so those are rejected with an error.
  *
  * The job list itself lives in the caller's dmell_ctx_t (ctx->bg_jobs/bg_job_count),
- * not in this module's own storage: dmell_bg is a Library module, which is a single
- * system-wide singleton shared by every dmell process, so any state that genuinely
- * differs per session (as the set of running background jobs does) has to be threaded
- * through explicitly instead of living in a static/global here.
+ * not in a static/global here: dmell_core is a Library module, a single
+ * system-wide singleton shared by every dmell process, so any state that
+ * genuinely differs per session (as the set of running background jobs does)
+ * has to be threaded through explicitly instead.
  */
 
 /**
@@ -35,7 +33,7 @@
  * @param len Length of the command string
  * @return 0 if the command was launched successfully, negative errno value otherwise
  */
-dmod_dmell_bg_global_api( 1.0, int, dmell_run_background, (dmell_ctx_t* ctx, const char* cmd, size_t len) );
+extern int dmell_run_background( dmell_ctx_t* ctx, const char* cmd, size_t len );
 
 /**
  * @brief Release resources held by background jobs that have finished.
@@ -44,6 +42,6 @@ dmod_dmell_bg_global_api( 1.0, int, dmell_run_background, (dmell_ctx_t* ctx, con
  *
  * @param ctx Per-session context whose bg_jobs/bg_job_count are inspected and updated
  */
-dmod_dmell_bg_global_api( 1.0, void, dmell_bg_reap, (dmell_ctx_t* ctx) );
+extern void dmell_bg_reap( dmell_ctx_t* ctx );
 
 #endif // DMELL_BG_H

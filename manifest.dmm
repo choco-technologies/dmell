@@ -8,20 +8,10 @@ $include https://github.com/choco-technologies/dmell/releases/download/vlatest/v
 # Module entries with version placeholder - will be expanded by $version-available
 dmell https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 
-# ===============    Library modules    ===============
-# dmell's own logic, split out into shared libraries (see lib/) so it can be
-# loaded once and reused by every dmell instance instead of being duplicated
-# per process. Included in the same release package as dmell.
+# ===============    Library module    ===============
+# dmell's own logic, shared across every dmell instance instead of being
+# duplicated per process. Included in the same release package as dmell.
 dmell_core https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_handlers https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_ia https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_script https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_line https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_bg https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_cmd https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_redirect https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_vars https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
-dmell_proc https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 
 # ===============    Command modules    ===============
 # Command modules are included in the same release package as dmell

@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -886,16 +884,6 @@ static int dmell_handler_module( int argc, char** argv, dmell_ctx_t* ctx )
 
 int dmell_register_handlers( void )
 {
-    // Kept only to give dependants a real call into this module - see the
-    // doc comment on the declaration in dmell_handlers.h. All actual
-    // registration work happens in dmod_init() below.
-    return 0;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-
     // Set default log level to warning
     Dmod_SetLogLevel( Dmod_LogLevel_Warn );
 
@@ -914,10 +902,5 @@ int dmod_init(const Dmod_Config_t *Config)
     dmell_register_command_handler( "uptime", dmell_handler_uptime );
 
     dmell_set_default_handler( dmell_handler_default );
-    return 0;
-}
-
-int dmod_deinit(void)
-{
     return 0;
 }

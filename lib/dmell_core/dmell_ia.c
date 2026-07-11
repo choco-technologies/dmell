@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <errno.h>
 #include <string.h>
 #include "dmell_ia.h"
@@ -18,8 +16,8 @@
  *
  * Owned via ctx->ia (see dmell_ctx_t in dmell_cmd.h), allocated lazily on the
  * first call to dmell_interactive_mode() - never as a static/global here,
- * since dmell_ia is a Library module (a single system-wide singleton shared
- * by every dmell process) and history is genuinely per-session data.
+ * since dmell_core is a Library module (a single system-wide singleton
+ * shared by every dmell process) and history is genuinely per-session data.
  */
 typedef struct
 {
@@ -824,16 +822,5 @@ int dmell_interactive_mode( dmell_ctx_t* ctx )
         history_add(state, line);
         Dmod_Free( line );
     }
-    return 0;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
     return 0;
 }

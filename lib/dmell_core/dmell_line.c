@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <stdbool.h>
 #include <errno.h>
 #include <dmod.h>
@@ -342,15 +340,4 @@ int dmell_run_args_line(dmell_ctx_t* ctx, int argc, char** argv)
     int result = dmell_run_line( ctx, line, line_length );
     Dmod_Free( line );
     return result;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
-    return 0;
 }

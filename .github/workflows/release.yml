@@ -115,9 +115,7 @@ jobs:
           done
 
           # Copy dmell's own library modules - dynamically discover from lib directory
-          # (dmell_core, dmell_handlers, dmell_ia, dmell_script, dmell_line, dmell_bg,
-          # dmell_cmd, dmell_redirect, dmell_vars - dmell requires these at load time,
-          # see lib/*/CMakeLists.txt)
+          # (dmell_core - dmell requires it at load time, see lib/dmell_core/CMakeLists.txt)
           for lib_dir in lib/*/; do
             lib=$(basename "$lib_dir")
             if [ -f $DMF_DIR/${lib}.dmf ]; then

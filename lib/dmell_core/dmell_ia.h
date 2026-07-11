@@ -1,8 +1,6 @@
 #ifndef DMELL_IA_H
 #define DMELL_IA_H
 
-#include "dmod.h"
-#include "dmell_ia_defs.h"
 #include "dmell_cmd.h"
 
 /**
@@ -14,6 +12,6 @@
  * @param ctx Per-session context, forwarded to every executed line
  * @return int Exit code
  */
-dmod_dmell_ia_global_api( 1.0, int, dmell_interactive_mode, (dmell_ctx_t* ctx) );
+extern int dmell_interactive_mode( dmell_ctx_t* ctx );
 
 #endif // DMELL_IA_H

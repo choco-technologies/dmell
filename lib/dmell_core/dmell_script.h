@@ -1,8 +1,6 @@
 #ifndef DMELL_SCRIPT_H
 #define DMELL_SCRIPT_H
 
-#include "dmod.h"
-#include "dmell_script_defs.h"
 #include "dmell_line.h"
 
 /**
@@ -20,7 +18,7 @@
  * @param len Length of the command line string
  * @return int Exit code of the last executed command, or negative value on error
  */
-dmod_dmell_script_global_api( 1.0, int, dmell_run_script_line, (dmell_ctx_t* ctx, const char* line, size_t len) );
+extern int dmell_run_script_line( dmell_ctx_t* ctx, const char* line, size_t len );
 
 /**
  * @brief Executes a script file with given arguments.
@@ -31,6 +29,6 @@ dmod_dmell_script_global_api( 1.0, int, dmell_run_script_line, (dmell_ctx_t* ctx
  * @param argv Array of argument strings
  * @return int Exit code of the script execution, or negative value on error
  */
-dmod_dmell_script_global_api( 1.0, int, dmell_run_script_file, (dmell_ctx_t* ctx, const char* file_path, int argc, char** argv) );
+extern int dmell_run_script_file( dmell_ctx_t* ctx, const char* file_path, int argc, char** argv );
 
 #endif // DMELL_SCRIPT_H

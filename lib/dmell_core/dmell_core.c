@@ -28,7 +28,6 @@ int dmell_main(int argc, char** argv)
     Dmod_EnvCtx_Push();
     if( argc <= 1 )
     {
-        dmell_register_handlers();
         result = dmell_interactive_mode(&ctx);
     }
     else if(argc == 2 && ( strcmp( argv[1], "-h" ) == 0 || strcmp( argv[1], "--help" ) == 0 ) )
@@ -44,13 +43,11 @@ int dmell_main(int argc, char** argv)
     else if(argc == 2)
     {
         const char* script_file = argv[1];
-        dmell_register_handlers();
         ctx.variables = dmell_add_argv_variables( ctx.variables, argc - 1, &argv[1] );
         result = dmell_run_script_file( &ctx, script_file, argc - 1, &argv[1] );
     }
     else if(argc == 3 && strcmp( argv[1], "-c" ) == 0 )
     {
-        dmell_register_handlers();
         result = dmell_run_script_line(&ctx, argv[2], strlen( argv[2] ) );
     }
     else
@@ -72,7 +69,10 @@ int dmell_main(int argc, char** argv)
 int dmod_init(const Dmod_Config_t *Config)
 {
     (void)Config;
-    return 0;
+    // Built-in commands are registered once, here, when dmell_core (a
+    // singleton Library module) is first loaded - not per dmell process -
+    // so the registry never accumulates duplicate entries across instances.
+    return dmell_register_handlers();
 }
 
 int dmod_deinit(void)

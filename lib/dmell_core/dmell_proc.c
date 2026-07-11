@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include "dmell_proc.h"
 
 /**
@@ -30,15 +28,4 @@ int dmell_proc_wait(dmosi_process_t proc, int32_t timeout_ms)
 int dmell_proc_get_exit_status(dmosi_process_t proc)
 {
     return dmosi_process_get_exit_status(proc);
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
-    return 0;
 }

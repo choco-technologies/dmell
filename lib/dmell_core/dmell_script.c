@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <errno.h>
 #include <string.h>
 #include "dmell_script.h"
@@ -129,16 +127,5 @@ int dmell_run_script_file( dmell_ctx_t* ctx, const char* file_path, int argc, ch
 
     Dmod_Free( line );
     Dmod_FileClose( file );
-    return 0;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
     return 0;
 }

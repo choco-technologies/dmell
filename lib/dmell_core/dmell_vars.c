@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -404,15 +402,4 @@ int dmell_expand_variables( dmell_var_t* head, const char* str, size_t str_len, 
     }
 
     return (int)required_size;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
-    return 0;
 }

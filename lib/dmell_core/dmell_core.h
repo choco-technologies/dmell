@@ -5,16 +5,19 @@
 #include "dmell_core_defs.h"
 
 /**
- * @brief Runs dmell: parses argv (help/version/script-file/-c/interactive),
- *        owns the per-session dmell_ctx_t, and dispatches to the right
- *        subsystem (dmell_ia, dmell_script, dmell_handlers, ...).
+ * @brief Runs dmell: parses argv (help/version/script-file/-c/interactive)
+ *        and dispatches to the right internal subsystem.
  *
- * This is the one place dmell's own executable ever calls into - every other
- * dmell_* module is this library's own concern, not the executable's. That is
- * deliberate: once dmod supports on-demand module loading, this is where a
- * given subsystem (e.g. dmell_ia, only needed for the interactive branch)
- * would be loaded lazily instead of being an unconditional required-module
- * dependency - without dmell's own executable ever having to change.
+ * This is the one function dmell's own executable calls - everything else in
+ * this module (command parsing/dispatch, variables, redirects, background
+ * jobs, interactive mode, script execution) is dmell_core's own internal
+ * concern, not exposed across a module boundary. All of it used to be split
+ * into separate dmod library modules (dmell_vars, dmell_cmd, dmell_line, ...)
+ * so it could eventually be loaded lazily piece by piece - merged back into
+ * one module for now since dmod has no lazy-loading support yet and the
+ * per-module fixed cost (header/footer/signature strings, ~300-500B each)
+ * wasn't worth paying ten times over for that not-yet-existing benefit. See
+ * the split plan for the exact numbers.
  *
  * @param argc Number of arguments (as passed to main())
  * @param argv Array of argument strings (as passed to main())

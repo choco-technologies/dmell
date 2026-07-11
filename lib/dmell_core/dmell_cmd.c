@@ -1,5 +1,3 @@
-#define DMOD_ENABLE_REGISTRATION    ON
-
 #include "dmell_hlp.h"
 #include "dmell_cmd.h"
 #include "dmell_redirect.h"
@@ -10,9 +8,9 @@
 /**
  * @brief Global array of registered commands.
  *
- * This registry is a Library-module singleton shared by every dmell process on
- * the system (see dmod's "Library modules are shared singletons" loading rule).
- * That is intentional here: the built-in command set registered by
+ * This registry is a dmell_core singleton shared by every dmell process on
+ * the system (see dmod's "Library modules are shared singletons" loading
+ * rule). That is intentional here: the built-in command set registered by
  * dmell_handlers is identical and deterministic across every dmell instance,
  * so there is nothing session-specific to protect by duplicating it per
  * process - unlike dmell_ctx_t's fields, which genuinely differ per session
@@ -672,16 +670,5 @@ int dmell_parse_command( const char* cmd, size_t len, dmell_argv_t* out_argv )
         return result;
     }
 
-    return 0;
-}
-
-int dmod_init(const Dmod_Config_t *Config)
-{
-    (void)Config;
-    return 0;
-}
-
-int dmod_deinit(void)
-{
     return 0;
 }
