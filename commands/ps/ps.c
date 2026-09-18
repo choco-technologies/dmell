@@ -5,48 +5,92 @@
 #include <string.h>
 
 /**
- * @brief Convert a thread state enum value to a human-readable string.
+ * @brief Convert a thread state enum value to a Linux ps-style STAT letter.
  *
  * @param state Thread state
- * @return const char* String representation of the state
+ * @return char Single-letter state code
  */
-static const char* thread_state_str( dmosi_thread_state_t state )
+static char thread_state_char( dmosi_thread_state_t state )
 {
     switch( state )
     {
-        case DMOSI_THREAD_STATE_CREATED:    return "CREATED";
-        case DMOSI_THREAD_STATE_READY:      return "READY";
-        case DMOSI_THREAD_STATE_RUNNING:    return "RUNNING";
-        case DMOSI_THREAD_STATE_BLOCKED:    return "BLOCKED";
-        case DMOSI_THREAD_STATE_SUSPENDED:  return "SUSPENDED";
-        case DMOSI_THREAD_STATE_TERMINATED: return "TERMINATED";
-        default:                            return "UNKNOWN";
+        case DMOSI_THREAD_STATE_CREATED:    return 'I';
+        case DMOSI_THREAD_STATE_READY:      return 'R';
+        case DMOSI_THREAD_STATE_RUNNING:    return 'R';
+        case DMOSI_THREAD_STATE_BLOCKED:    return 'S';
+        case DMOSI_THREAD_STATE_SUSPENDED:  return 'T';
+        case DMOSI_THREAD_STATE_TERMINATED: return 'X';
+        default:                            return '?';
     }
 }
 
 /**
- * @brief Convert a process state enum value to a human-readable string.
+ * @brief Convert a process state enum value to a Linux ps-style STAT letter.
  *
  * @param state Process state
- * @return const char* String representation of the state
+ * @return char Single-letter state code
  */
-static const char* process_state_str( dmosi_process_state_t state )
+static char process_state_char( dmosi_process_state_t state )
 {
     switch( state )
     {
-        case DMOSI_PROCESS_STATE_CREATED:    return "CREATED";
-        case DMOSI_PROCESS_STATE_RUNNING:    return "RUNNING";
-        case DMOSI_PROCESS_STATE_SUSPENDED:  return "SUSPENDED";
-        case DMOSI_PROCESS_STATE_TERMINATED: return "TERMINATED";
-        case DMOSI_PROCESS_STATE_ZOMBIE:     return "ZOMBIE";
-        default:                             return "UNKNOWN";
+        case DMOSI_PROCESS_STATE_CREATED:    return 'I';
+        case DMOSI_PROCESS_STATE_RUNNING:    return 'R';
+        case DMOSI_PROCESS_STATE_SUSPENDED:  return 'T';
+        case DMOSI_PROCESS_STATE_TERMINATED: return 'X';
+        case DMOSI_PROCESS_STATE_ZOMBIE:     return 'Z';
+        default:                             return '?';
+    }
+}
+
+/**
+ * @brief Format a runtime in milliseconds as a Linux ps-style HH:MM:SS field.
+ *
+ * @param runtime_ms Runtime in milliseconds
+ * @param buf        Output buffer
+ * @param buf_size   Size of @p buf
+ */
+static void format_time( uint64_t runtime_ms, char* buf, size_t buf_size )
+{
+    uint64_t total_seconds = runtime_ms / 1000;
+    unsigned hours   = (unsigned)( total_seconds / 3600 );
+    unsigned minutes = (unsigned)( ( total_seconds % 3600 ) / 60 );
+    unsigned seconds = (unsigned)( total_seconds % 60 );
+
+    Dmod_SnPrintf( buf, buf_size, "%02u:%02u:%02u", hours, minutes, seconds );
+}
+
+/**
+ * @brief Build the COMMAND field for a process: its name, plus the owning
+ *        module name in brackets when it differs from the process name.
+ *
+ * @param proc     Process handle
+ * @param buf      Output buffer
+ * @param buf_size Size of @p buf
+ */
+static void format_command( dmosi_process_t proc, char* buf, size_t buf_size )
+{
+    const char* name = dmosi_process_get_name( proc );
+    const char* mod  = dmosi_process_get_module_name( proc );
+
+    name = name ? name : "?";
+
+    if( mod != NULL && strcmp( mod, name ) != 0 )
+    {
+        Dmod_SnPrintf( buf, buf_size, "%s [%s]", name, mod );
+    }
+    else
+    {
+        Dmod_SnPrintf( buf, buf_size, "%s", name );
     }
 }
 
 /**
  * @brief Entry point for the 'ps' command module.
  *
- * Lists currently running processes and their threads using the dmosi interface.
+ * Lists currently running processes and their threads using the dmosi
+ * interface, formatted like Linux's `ps -eLf`: one summary line per
+ * process followed by a tree of its threads.
  * Usage: ps
  *
  * @param argc Number of arguments
@@ -106,25 +150,28 @@ int main( int argc, char** argv )
     }
 
     /* Print table header */
-    Dmod_Printf( "%-6s %-20s %-16s %-10s\n",
-                 "PID", "PROCESS", "MODULE", "STATE" );
-    Dmod_Printf( "  %-22s %-10s %6s\n",
-                 "THREAD", "STATE", "CPU%" );
+    Dmod_Printf( "%5s %5s %5s %-5s %6s %8s %s\n",
+                 "PID", "PPID", "UID", "STAT", "%CPU", "TIME", "COMMAND" );
 
-    /* Print each process followed by its threads */
+    /* Print each process followed by a tree of its threads */
     for( size_t i = 0; i < proc_count; i++ )
     {
         dmosi_process_t        proc      = procs[i];
-        const char*            proc_name = dmosi_process_get_name( proc );
-        const char*            mod_name  = dmosi_process_get_module_name( proc );
-        dmosi_process_state_t  pstate    = dmosi_process_get_state( proc );
+        dmosi_process_t        parent    = dmosi_process_get_parent( proc );
         dmosi_process_id_t     pid       = dmosi_process_get_id( proc );
+        dmosi_process_id_t     ppid      = parent ? dmosi_process_get_id( parent ) : 0;
+        dmosi_user_id_t        uid       = dmosi_process_get_uid( proc );
+        dmosi_process_state_t  pstate    = dmosi_process_get_state( proc );
 
-        Dmod_Printf( "%-6u %-20s %-16s %-10s\n",
-                     (unsigned)pid,
-                     proc_name ? proc_name : "(unknown)",
-                     mod_name  ? mod_name  : "(unknown)",
-                     process_state_str( pstate ) );
+        char cmd_buf[64];
+        format_command( proc, cmd_buf, sizeof( cmd_buf ) );
+
+        char pstat_str[2] = { process_state_char( pstate ), '\0' };
+
+        /* Aggregate CPU% and runtime across the process's own threads */
+        float    total_cpu = 0.0f;
+        uint64_t total_runtime_ms = 0;
+        size_t   proc_thread_count = 0;
 
         for( size_t j = 0; j < actual_count; j++ )
         {
@@ -133,23 +180,66 @@ int main( int argc, char** argv )
                 continue;
             }
 
-            const char*       thread_name = dmosi_thread_get_name( threads[j] );
             dmosi_thread_info_t info;
-            int ret = dmosi_thread_get_info( threads[j], &info );
-
-            if( ret == 0 )
+            if( dmosi_thread_get_info( threads[j], &info ) == 0 )
             {
-                Dmod_Printf( "  %-22s %-10s %5.1f%%\n",
-                             thread_name ? thread_name : "(unknown)",
-                             thread_state_str( info.state ),
-                             info.cpu_usage );
+                total_cpu += info.cpu_usage;
+                total_runtime_ms += info.runtime_ms;
+            }
+            proc_thread_count++;
+        }
+
+        char time_buf[16];
+        format_time( total_runtime_ms, time_buf, sizeof( time_buf ) );
+
+        Dmod_Printf( "%5u %5u %5u %-5s %6.1f %8s %s\n",
+                     (unsigned)pid,
+                     (unsigned)ppid,
+                     (unsigned)uid,
+                     pstat_str,
+                     (double)total_cpu,
+                     time_buf,
+                     cmd_buf );
+
+        /* Print the thread tree for this process */
+        size_t printed = 0;
+        for( size_t j = 0; j < actual_count; j++ )
+        {
+            if( dmosi_thread_get_process( threads[j] ) != proc )
+            {
+                continue;
+            }
+
+            printed++;
+            const char* connector = ( printed == proc_thread_count ) ? "\xe2\x94\x94\xe2\x94\x80 " /* '└─ ' */
+                                                                       : "\xe2\x94\x9c\xe2\x94\x80 " /* '├─ ' */;
+
+            const char* thread_name = dmosi_thread_get_name( threads[j] );
+            dmosi_thread_info_t info;
+            char thread_time_buf[16];
+            char tstat_str[2];
+            double cpu = 0.0;
+
+            if( dmosi_thread_get_info( threads[j], &info ) == 0 )
+            {
+                tstat_str[0] = thread_state_char( info.state );
+                cpu = (double)info.cpu_usage;
+                format_time( info.runtime_ms, thread_time_buf, sizeof( thread_time_buf ) );
             }
             else
             {
-                Dmod_Printf( "  %-22s %-10s\n",
-                             thread_name ? thread_name : "(unknown)",
-                             thread_state_str( DMOSI_THREAD_STATE_CREATED ) );
+                tstat_str[0] = thread_state_char( DMOSI_THREAD_STATE_CREATED );
+                format_time( 0, thread_time_buf, sizeof( thread_time_buf ) );
             }
+            tstat_str[1] = '\0';
+
+            Dmod_Printf( "%5s %5s %5s %-5s %6.1f %8s   %s%s\n",
+                         "", "", "",
+                         tstat_str,
+                         cpu,
+                         thread_time_buf,
+                         connector,
+                         thread_name ? thread_name : "(unknown)" );
         }
     }
 
