@@ -377,7 +377,7 @@ static int dmell_handler_exit( int argc, char** argv, dmell_ctx_t* ctx )
         }
         endptr = (char*)str;
 
-        if( *endptr != '\0' || code < INT_MIN || code > INT_MAX )
+        if( str == argv[1] || *endptr != '\0' )
         {
             DMOD_LOG_ERROR("Invalid exit code: %s\n", argv[1]);
             exit_code = 2;
@@ -393,8 +393,14 @@ static int dmell_handler_exit( int argc, char** argv, dmell_ctx_t* ctx )
         exit_code = ctx->last_exit_code;
     }
 
-    // Signal exit by returning a special value (negative for error handling)
-    return exit_code == 0 ? -255 : -exit_code;
+    // Truncate to a real exit status, the way every shell does: the value can
+    // be out of range from either direction here - an explicit "exit 1000", or
+    // a last_exit_code that is one of this shell's own negative error returns.
+    exit_code &= DMELL_EXIT_STATUS_MAX;
+
+    // Say "stop the script, with this status" - distinctly from "this command
+    // failed", which is what a bare negative return means everywhere else.
+    return DMELL_EXIT_REQUEST( exit_code );
 }
 
 /**

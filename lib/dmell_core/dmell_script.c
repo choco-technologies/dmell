@@ -4,6 +4,7 @@
 #include "dmell_vars.h"
 #include "dmod.h"
 #include "dmell_hlp.h"
+#include "dmell_cmd.h"
 
 /**
  * @brief Helper function to find the start of a comment in the script line.
@@ -72,15 +73,26 @@ int dmell_run_script_line( dmell_ctx_t* ctx, const char* line, size_t len )
         Dmod_Free( expanded_line );
         return -EINVAL;
     }
-    int exit_code = dmell_run_line( ctx, expanded_line, effective_len );
+    // required_size, not effective_len: the latter measures the line *before*
+    // expansion. Handing it to dmell_run_line() as the expanded buffer's length
+    // truncates the command whenever a variable expanded to something longer
+    // than its name, and reads past the end of the buffer whenever it expanded
+    // to something shorter.
+    int result = dmell_run_line( ctx, expanded_line, (size_t)required_size );
     Dmod_Free( expanded_line );
+
+    // What "$?" and the next line's && / || must see is the *status*, whether
+    // it came back on its own or wrapped in an exit request.
+    int exit_code = DMELL_IS_EXIT_REQUEST( result ) ? DMELL_EXIT_REQUEST_STATUS( result ) : result;
 
     char code_str[12];
     Dmod_SnPrintf( code_str, sizeof(code_str), "%d", exit_code );
     ctx->variables      = (void*)dmell_set_variable( (dmell_var_t*)ctx->variables, "?", code_str );
     ctx->last_exit_code = exit_code;
 
-    return exit_code;
+    // The request itself keeps travelling, so whoever is running the script
+    // knows to stop rather than carry on to the next line.
+    return result;
 }
 
 int dmell_run_script_file( dmell_ctx_t* ctx, const char* file_path, int argc, char** argv)
@@ -115,13 +127,21 @@ int dmell_run_script_file( dmell_ctx_t* ctx, const char* file_path, int argc, ch
     {
         line_number++;
         line_len = strlen( line );
-        int exit_code = dmell_run_script_line( ctx, line, line_len );
-        if( exit_code < 0 )
+        int result = dmell_run_script_line( ctx, line, line_len );
+        if( DMELL_IS_EXIT_REQUEST( result ) )
+        {
+            // The script asked to stop. That is how it is supposed to end, so
+            // it leaves through the same door as running off the last line.
+            Dmod_Free( line );
+            Dmod_FileClose( file );
+            return DMELL_EXIT_REQUEST_STATUS( result );
+        }
+        if( result < 0 )
         {
             DMOD_LOG_ERROR("Error executing line %d in script file %s\n", line_number, file_path);
             Dmod_Free( line );
             Dmod_FileClose( file );
-            return exit_code;
+            return result;
         }
     }
 

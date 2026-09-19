@@ -75,4 +75,24 @@ extern void                 dmell_free_argv                (dmell_argv_t* argv);
  */
 extern bool dmell_find_command_prefix_match(const char* partial_name, char* out_match, size_t max_length);
 
+/**
+ * @brief Encoding a command handler uses to say "stop, and end with this status"
+ *
+ * A handler's return value normally *is* the command's exit status, so there is
+ * no value left over to mean "the script should stop here" - which is why
+ * `exit` used to signal it by returning a negative number, indistinguishable
+ * from a command that simply failed. A script ending in a perfectly good
+ * `exit 0` was therefore reported as "Error executing line N" and, one level
+ * up, as a unit that "exited unexpectedly".
+ *
+ * These carve out a range far below any errno for that one meaning. The status
+ * rides along inside it, so a caller can both tell that the script asked to
+ * stop and know what to stop *with*. Statuses are 0..255, as everywhere else.
+ */
+#define DMELL_EXIT_STATUS_MAX           255
+#define DMELL_EXIT_REQUEST_BASE         (-0x10000)
+#define DMELL_EXIT_REQUEST(Status)      (DMELL_EXIT_REQUEST_BASE - (int)(Status))
+#define DMELL_IS_EXIT_REQUEST(Result)   ((Result) <= DMELL_EXIT_REQUEST_BASE)
+#define DMELL_EXIT_REQUEST_STATUS(R)    ((int)(DMELL_EXIT_REQUEST_BASE - (R)))
+
 #endif // DMELL_CMD_H
