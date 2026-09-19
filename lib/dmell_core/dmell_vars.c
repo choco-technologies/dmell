@@ -21,6 +21,24 @@ static bool is_var_name_char( char c )
 }
 
 /**
+ * @brief Whether @p c names one of the shell's single-character variables
+ *
+ * These are set by the shell itself rather than by the user - "?" is the
+ * previous line's exit status, written after every line in
+ * dmell_run_script_line(). They cannot go through is_var_name_char(): a name
+ * made of those characters is greedy, so "$?" followed by anything would
+ * swallow it ("$?abc" would look up "?abc"). A special variable's name is
+ * exactly the one character, which is why get_var_end() stops right after it.
+ *
+ * "${?}" has always worked, since the braced form takes whatever is inside the
+ * braces verbatim; it is the bare "$?" that this makes work.
+ */
+static bool is_special_var_char( char c )
+{
+    return ( c == '?' );
+}
+
+/**
  * @brief Helper function to check if the string at the current position represents a variable.
  *
  * @param str Current position in the string
@@ -42,7 +60,7 @@ static bool is_var( const char* str, const char* end_ptr )
     }
 
     char c = *str;
-    return ( c == '{' || is_var_name_char( c ) );
+    return ( c == '{' || is_var_name_char( c ) || is_special_var_char( c ) );
 }
 
 /**
@@ -78,6 +96,11 @@ static const char* get_var_end( const char* str, const char* end_ptr )
             ptr++;
         }
         return ptr;
+    }
+    else if( is_special_var_char( *ptr ) )
+    {
+        // Exactly one character long - see is_special_var_char()
+        return ptr + 1;
     }
     else
     {

@@ -300,6 +300,15 @@ int dmell_run_line(dmell_ctx_t* ctx, const char* line, size_t len)
                 int exit_code = ( sep == dmell_line_sep_background )
                     ? dmell_run_background( ctx, ptr, cmd_len )
                     : dmell_run_command_string( ctx, ptr, cmd_len );
+
+                // "exit" ends the line outright - there is nothing left to
+                // join it with, and feeding the request through
+                // join_results() would turn it into an ordinary status.
+                if( DMELL_IS_EXIT_REQUEST( exit_code ) )
+                {
+                    return exit_code;
+                }
+
                 result = join_results( last_exit_code, exit_code, prev_sep );
                 last_exit_code = exit_code;
             }
