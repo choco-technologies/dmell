@@ -150,8 +150,8 @@ int main( int argc, char** argv )
     }
 
     /* Print table header */
-    Dmod_Printf( "%5s %5s %5s %-5s %6s %8s %s\n",
-                 "PID", "PPID", "UID", "STAT", "%CPU", "TIME", "COMMAND" );
+    Dmod_Printf( "%5s %5s %5s %-5s %6s %8s %-20s %s\n",
+                 "PID", "PPID", "UID", "STAT", "%CPU", "TIME", "COMMAND", "CMD" );
 
     /* Print each process followed by a tree of its threads */
     for( size_t i = 0; i < proc_count; i++ )
@@ -165,6 +165,12 @@ int main( int argc, char** argv )
 
         char cmd_buf[64];
         format_command( proc, cmd_buf, sizeof( cmd_buf ) );
+
+        /* Full command line (program plus arguments) the process was started with,
+         * as recorded by the module-start API via dmosi_process_set_command() -
+         * unavailable for processes not spawned through it (e.g. init). */
+        const char* full_command = dmosi_process_get_command( proc );
+        full_command = full_command ? full_command : "-";
 
         char pstat_str[2] = { process_state_char( pstate ), '\0' };
 
@@ -192,14 +198,15 @@ int main( int argc, char** argv )
         char time_buf[16];
         format_time( total_runtime_ms, time_buf, sizeof( time_buf ) );
 
-        Dmod_Printf( "%5u %5u %5u %-5s %6.1f %8s %s\n",
+        Dmod_Printf( "%5u %5u %5u %-5s %6.1f %8s %-20s %s\n",
                      (unsigned)pid,
                      (unsigned)ppid,
                      (unsigned)uid,
                      pstat_str,
                      (double)total_cpu,
                      time_buf,
-                     cmd_buf );
+                     cmd_buf,
+                     full_command );
 
         /* Print the thread tree for this process */
         size_t printed = 0;
