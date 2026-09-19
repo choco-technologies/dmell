@@ -36,7 +36,7 @@ dmod_add_library(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
     dmell_handlers.c
     dmell_ia.c
     dmell_core.c
-    dmell_runtime_stubs.c
+    ${CMAKE_SOURCE_DIR}/lib/dmell_runtime_stubs/dmell_runtime_stubs.c
 )
 
 target_include_directories(${DMOD_MODULE_NAME} PRIVATE
