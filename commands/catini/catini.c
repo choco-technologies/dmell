@@ -104,7 +104,7 @@ static void print_highlighted_line(const char* line)
     // Check for comment
     if (is_comment_line(line))
     {
-        Dmod_Printf("%s%s%s", VT100_COMMENT, line, VT100_RESET);
+        Dmod_Printf("%s%s%s\n", VT100_COMMENT, line, VT100_RESET);
         return;
     }
     
@@ -129,7 +129,7 @@ static void print_highlighted_line(const char* line)
         Dmod_Printf("%s", VT100_RESET);
         
         // Print rest of line
-        Dmod_Printf("%s", section_end);
+        Dmod_Printf("%s\n", section_end);
         return;
     }
     
@@ -158,12 +158,12 @@ static void print_highlighted_line(const char* line)
         Dmod_Printf("=");
         
         // Print value in color
-        Dmod_Printf("%s%s%s", VT100_VALUE, value_start, VT100_RESET);
+        Dmod_Printf("%s%s%s\n", VT100_VALUE, value_start, VT100_RESET);
         return;
     }
     
     // Default: print line as-is (empty lines, etc.)
-    Dmod_Printf("%s", line);
+    Dmod_Printf("%s\n", line);
 }
 
 /**
@@ -185,10 +185,13 @@ int main(int argc, char** argv)
     }
 
     int result = 0;
+    char* read_buffer = Dmod_Malloc(LINE_BUFFER_SIZE);
     char* line_buffer = Dmod_Malloc(LINE_BUFFER_SIZE);
-    if (line_buffer == NULL)
+    if (read_buffer == NULL || line_buffer == NULL)
     {
         DMOD_LOG_ERROR("Memory allocation failed\n");
+        Dmod_Free(read_buffer);
+        Dmod_Free(line_buffer);
         return -ENOMEM;
     }
 
@@ -203,14 +206,44 @@ int main(int argc, char** argv)
             continue;
         }
 
-        while (Dmod_FileReadLine(line_buffer, LINE_BUFFER_SIZE, file) != NULL)
+        int line_pos = 0;
+        size_t bytes_read;
+        while ((bytes_read = Dmod_FileRead(read_buffer, 1, LINE_BUFFER_SIZE - 1, file)) > 0)
         {
+            for (size_t j = 0; j < bytes_read; j++)
+            {
+                char c = read_buffer[j];
+
+                if (c == '\r')
+                {
+                    // Skip CR to handle \r\n line endings
+                    continue;
+                }
+                else if (c == '\n')
+                {
+                    // Terminate the line (without \n) and print it
+                    line_buffer[line_pos] = '\0';
+                    print_highlighted_line(line_buffer);
+                    line_pos = 0;
+                }
+                else if (line_pos < LINE_BUFFER_SIZE - 1)
+                {
+                    line_buffer[line_pos++] = c;
+                }
+            }
+        }
+
+        // Handle last line if file does not end with a newline
+        if (line_pos > 0)
+        {
+            line_buffer[line_pos] = '\0';
             print_highlighted_line(line_buffer);
         }
 
         Dmod_FileClose(file);
     }
 
+    Dmod_Free(read_buffer);
     Dmod_Free(line_buffer);
     return result;
 }
