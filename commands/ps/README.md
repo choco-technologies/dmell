@@ -13,27 +13,26 @@ ps
 ## Output Format
 
 ```
-PID    PROCESS              MODULE           STATE
-  THREAD                 STATE      CPU%
-1      main               dmell            RUNNING
-  [main_thread]          RUNNING    5.2%
-  [io_thread]            BLOCKED    0.1%
-2      sensor             sensor_mod       RUNNING
-  [sensor_reader]        RUNNING    1.0%
+  PID  PPID   UID STAT   %CPU     TIME COMMAND              CMD
+    1     0     0 R       5.3    00:00:12 main [dmell]          dmell
+    └─ main_thread
+    2     1     0 R       1.0    00:00:01 sensor               sensor_mod --port 12
+    └─ sensor_reader
 ```
 
 ### Columns
 
 **Process line:**
 - `PID`     - Process identifier
-- `PROCESS` - Process name
-- `MODULE`  - DMOD module name associated with the process
-- `STATE`   - Process state (`CREATED`, `RUNNING`, `SUSPENDED`, `TERMINATED`, `ZOMBIE`)
+- `PPID`    - Parent process identifier (0 if detached)
+- `UID`     - User ID associated with the process
+- `STAT`    - Process state (`I` created, `R` running, `T` suspended, `X` terminated, `Z` zombie)
+- `%CPU`    - Aggregated CPU usage across the process's own threads
+- `TIME`    - Aggregated runtime across the process's own threads (`HH:MM:SS`)
+- `COMMAND` - Process name, plus the owning module name in brackets when it differs from the process name
+- `CMD`     - The full command line (program plus arguments) the process was started with, as recorded by the module-start API via `dmosi_process_set_command()` - `-` if unavailable (e.g. a process not spawned through it)
 
-**Thread line (indented):**
-- `THREAD` - Thread name
-- `STATE`  - Thread state (`CREATED`, `READY`, `RUNNING`, `BLOCKED`, `SUSPENDED`, `TERMINATED`)
-- `CPU%`   - CPU usage as a percentage
+**Thread line (indented):** one line per thread of the process above it, showing its `STAT`, `%CPU` and `TIME` in the same columns, followed by the thread's name.
 
 ## Exit Codes
 
