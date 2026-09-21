@@ -627,7 +627,17 @@ static char* read_line( dmell_ia_state_t* state, size_t* out_len )
     while( true )
     {
         int c = Dmod_Getc();
-        if( c == EOF || c == '\n' || c == '\r' )
+        if( c == EOF )
+        {
+            /* The backing device is gone (e.g. a telnet peer disconnected) -
+             * distinct from Enter on an empty line: report EOF to the caller
+             * so it stops calling us, instead of spinning forever on an
+             * input source that will never produce more data. */
+            Dmod_Free( buffer );
+            buffer = NULL;
+            goto cleanup;
+        }
+        if( c == '\n' || c == '\r' )
         {
             buffer[position] = '\0';
             Dmod_Printf("\n");
@@ -809,8 +819,10 @@ int dmell_interactive_mode( dmell_ctx_t* ctx )
         char* line = read_line( state, &line_len );
         if( line == NULL )
         {
-            DMOD_LOG_ERROR("Failed to read line in interactive mode\n");
-            return -ENOMEM;
+            /* EOF (backing device gone) or an allocation failure inside
+             * read_line() - either way, nothing more can be read, so stop
+             * instead of looping forever on an input source that is done. */
+            break;
         }
         if(strncmp(line, "exit", 4) == 0 || strncmp(line, "quit", 4) == 0)
         {
