@@ -7,6 +7,42 @@
 #include "dmell_script.h"
 #include "dmell_vars.h"
 #include "dmell_handlers.h"
+#include "dmosi.h"
+
+/**
+ * @brief Close every stream this process holds on its tty, before exiting
+ *
+ * A process that exits does not get its stdin/stdout/stderr/stdlog handles
+ * closed for it - dmosi_process_kill() marks it terminated and kills its
+ * threads, but never calls dmosi_process_destroy(), which is what would
+ * actually close the handles (see dmtty/tools/console/main.c's own
+ * release_own_streams(), started once per tty device precisely to avoid this
+ * for itself - this mirrors it for dmell, the process that actually stays
+ * around for the session).
+ *
+ * For a device backed by something with its own notion of a live session -
+ * telnetd's per-connection tty being the case that matters here - nothing
+ * else ever notices this process is gone without this: `exit` ends the
+ * interactive loop, but the TCP connection is left open and unserved forever
+ * instead of hanging up, because telnetd only hangs up on dmtty_dmdrvi_close()
+ * (see telnetd_dmdrvi_close()), which never comes.
+ *
+ * A NULL current process is the only case worth handling: a thread dmosi
+ * never registered has no streams to release in the first place.
+ */
+static void release_own_streams(void)
+{
+    dmosi_process_t self = dmosi_process_current();
+    if (self == NULL)
+    {
+        return;
+    }
+
+    for (dmosi_stream_index_t index = 0; index < DMOSI_STREAM_COUNT; index++)
+    {
+        dmosi_process_set_stream(self, index, NULL);
+    }
+}
 
 /**
  * @brief Helper function to print help information.
@@ -63,6 +99,10 @@ int dmell_main(int argc, char** argv)
         result = -1;
     }
     Dmod_EnvCtx_Pop();
+
+    // Last thing this process does - see release_own_streams().
+    release_own_streams();
+
     return result;
 }
 
