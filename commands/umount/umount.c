@@ -1,12 +1,7 @@
 #include <dmod.h>
+#include <dmvfs.h>
 #include <errno.h>
 #include <string.h>
-
-/*
- * dmvfs is built into the firmware (it is not a module), its API is
- * resolved from the system like the rest of the built-in API.
- */
-DMOD_BUILTIN_API( dmvfs, 1.0, bool, _unmount_fs, (const char* mount_point) );
 
 /**
  * @brief Entry point for the 'umount' command module.
