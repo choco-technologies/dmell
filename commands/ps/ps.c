@@ -61,6 +61,27 @@ static void format_time( uint64_t runtime_ms, char* buf, size_t buf_size )
 }
 
 /**
+ * @brief Format a thread's stack usage as "<peak>/<size>" in bytes.
+ *
+ * The peak is the most stack the thread has ever used (its high-water
+ * mark), the size what it was created with - together they tell how much
+ * stack a module really needs.
+ *
+ * @param info     Thread information
+ * @param buf      Output buffer
+ * @param buf_size Size of @p buf
+ */
+static void format_stack( const dmosi_thread_info_t* info, char* buf, size_t buf_size )
+{
+    if( info->stack_total == 0 )
+    {
+        Dmod_SnPrintf( buf, buf_size, "-" );
+        return;
+    }
+    Dmod_SnPrintf( buf, buf_size, "%u/%u", (unsigned)info->stack_peak, (unsigned)info->stack_total );
+}
+
+/**
  * @brief Build the COMMAND field for a process: its name, plus the owning
  *        module name in brackets when it differs from the process name.
  *
@@ -150,8 +171,8 @@ int main( int argc, char** argv )
     }
 
     /* Print table header */
-    Dmod_Printf( "%5s %5s %5s %-5s %6s %8s %-20s %s\n",
-                 "PID", "PPID", "UID", "STAT", "%CPU", "TIME", "COMMAND", "CMD" );
+    Dmod_Printf( "%5s %5s %5s %-5s %6s %8s %11s %-20s %s\n",
+                 "PID", "PPID", "UID", "STAT", "%CPU", "TIME", "STACK", "COMMAND", "CMD" );
 
     /* Print each process followed by a tree of its threads */
     for( size_t i = 0; i < proc_count; i++ )
@@ -198,13 +219,14 @@ int main( int argc, char** argv )
         char time_buf[16];
         format_time( total_runtime_ms, time_buf, sizeof( time_buf ) );
 
-        Dmod_Printf( "%5u %5u %5u %-5s %6.1f %8s %-20s %s\n",
+        Dmod_Printf( "%5u %5u %5u %-5s %6.1f %8s %11s %-20s %s\n",
                      (unsigned)pid,
                      (unsigned)ppid,
                      (unsigned)uid,
                      pstat_str,
                      (double)total_cpu,
                      time_buf,
+                     "",
                      cmd_buf,
                      full_command );
 
@@ -224,6 +246,7 @@ int main( int argc, char** argv )
             const char* thread_name = dmosi_thread_get_name( threads[j] );
             dmosi_thread_info_t info;
             char thread_time_buf[16];
+            char stack_buf[24];
             char tstat_str[2];
             double cpu = 0.0;
 
@@ -232,19 +255,22 @@ int main( int argc, char** argv )
                 tstat_str[0] = thread_state_char( info.state );
                 cpu = (double)info.cpu_usage;
                 format_time( info.runtime_ms, thread_time_buf, sizeof( thread_time_buf ) );
+                format_stack( &info, stack_buf, sizeof( stack_buf ) );
             }
             else
             {
                 tstat_str[0] = thread_state_char( DMOSI_THREAD_STATE_CREATED );
                 format_time( 0, thread_time_buf, sizeof( thread_time_buf ) );
+                Dmod_SnPrintf( stack_buf, sizeof( stack_buf ), "-" );
             }
             tstat_str[1] = '\0';
 
-            Dmod_Printf( "%5s %5s %5s %-5s %6.1f %8s   %s%s\n",
+            Dmod_Printf( "%5s %5s %5s %-5s %6.1f %8s %11s   %s%s\n",
                          "", "", "",
                          tstat_str,
                          cpu,
                          thread_time_buf,
+                         stack_buf,
                          connector,
                          thread_name ? thread_name : "(unknown)" );
         }
