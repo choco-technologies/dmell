@@ -32,3 +32,5 @@ find https://github.com/choco-technologies/dmell/releases/download/v<version>/dm
 which https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 printf https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
 ps https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+mount https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
+umount https://github.com/choco-technologies/dmell/releases/download/v<version>/dmell-v<version>-<arch_name>.zip
