@@ -142,6 +142,8 @@ if(NOT DMELL_BUILD_TESTS)
     add_subdirectory(commands/which)
     add_subdirectory(commands/printf)
     add_subdirectory(commands/ps)
+    add_subdirectory(commands/mount)
+    add_subdirectory(commands/umount)
 endif()
 
 # ======================================================================

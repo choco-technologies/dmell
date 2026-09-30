@@ -8,7 +8,7 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 ## Features
 
 - **Built-in Commands**: Basic shell commands like `echo`, `write`, `read`, `help`, `cd`, `pwd`, `set`, `unset`, `export`, and `exit`
-- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`, `rm`, `rmdir`, `find`, `which`, `printf`) available as separate DMOD modules
+- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`, `rm`, `rmdir`, `find`, `which`, `printf`, `mount`, `umount`) available as separate DMOD modules
 - **Script Execution**: Support for `.dme` script files
 - **Variable Management**: Environment variables and shell variables support
 - **Shebang Support**: Execute scripts with custom interpreters
@@ -83,6 +83,8 @@ dmf-get rmdir
 dmf-get find
 dmf-get which
 dmf-get printf
+dmf-get mount
+dmf-get umount
 ```
 
 | Module | Description | Documentation |
@@ -102,6 +104,8 @@ dmf-get printf
 | `find` | Search for files | [commands/find/README.md](commands/find/README.md) |
 | `which`| Locate module path | [commands/which/README.md](commands/which/README.md) |
 | `printf`| Format and print text | [commands/printf/README.md](commands/printf/README.md) |
+| `mount`| Mount a file system | [commands/mount/README.md](commands/mount/README.md) |
+| `umount`| Unmount file systems | [commands/umount/README.md](commands/umount/README.md) |
 
 ## Building
 
@@ -169,7 +173,9 @@ dmell/
 │   ├── rmdir/           # Remove directories module
 │   ├── find/            # Search for files module
 │   ├── which/           # Locate module module
-│   └── printf/          # Format and print module
+│   ├── printf/          # Format and print module
+│   ├── mount/           # Mount file system module
+│   └── umount/          # Unmount file system module
 ├── examples/            # Example scripts
 └── CMakeLists.txt       # Build configuration
 ```
