@@ -627,6 +627,13 @@ static char* read_line( dmell_ia_state_t* state, size_t* out_len )
     while( true )
     {
         int c = Dmod_Getc();
+        /* NUL is not a command character. Some polling stdin backends return
+         * it on an empty read; storing it silently truncates the command. */
+        if( c == 0 )
+        {
+            Dmod_ThreadSleep(1);
+            continue;
+        }
         if( c == EOF )
         {
             /* The backing device is gone (e.g. a telnet peer disconnected) -

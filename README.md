@@ -20,6 +20,8 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 | `help`  | Show built-in command help |
 | `echo`  | Print arguments to standard output |
 | `write` | Write text to a file |
+| `sendf <file>` | Send a binary file over TTY with handshake and CRC |
+| `recvf <new-file>` | Receive a binary file over TTY with handshake and CRC |
 | `read`  | Read and print file contents |
 | `cd`    | Change current directory |
 | `pwd`   | Print current working directory |
@@ -183,3 +185,6 @@ dmell/
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+See [binary TTY file transfer](docs/tty-file-transfer.md) for `sendf`, `recvf`
+and the PC serial tool (`tools/tty_file.py`).

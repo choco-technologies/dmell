@@ -33,6 +33,7 @@ dmod_add_library(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
     dmell_bg.c
     dmell_line.c
     dmell_script.c
+    dmell_transfer.c
     dmell_handlers.c
     dmell_ia.c
     dmell_core.c

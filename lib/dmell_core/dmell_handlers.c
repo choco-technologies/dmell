@@ -10,6 +10,7 @@
 #include "dmell_script.h"
 #include "dmell_vars.h"
 #include "dmell_hlp.h"
+#include "dmell_transfer.h"
 
 #define DMELL_FILE_IO_BUFFER_SIZE 512
 
@@ -164,6 +165,8 @@ static int dmell_handler_help( int argc, char** argv, dmell_ctx_t* ctx )
     Dmod_Printf("  echo [args...]               Print arguments\n");
     Dmod_Printf("  write <file> <content...>    Write content to a file\n");
     Dmod_Printf("  read <file>                  Read and print file content\n");
+    Dmod_Printf("  sendf <file>                 Send a binary file over TTY\n");
+    Dmod_Printf("  recvf <new-file>             Receive a binary file over TTY\n");
     Dmod_Printf("  set <name=value>             Set a shell variable\n");
     Dmod_Printf("  export <name=value>          Export an environment variable\n");
     Dmod_Printf("  unset <name>                 Remove a variable\n");
@@ -896,6 +899,8 @@ int dmell_register_handlers( void )
     dmell_register_command_handler( "echo", dmell_handler_echo );
     dmell_register_command_handler( "write", dmell_handler_write );
     dmell_register_command_handler( "read", dmell_handler_read );
+    dmell_register_command_handler( "sendf", dmell_handler_sendf );
+    dmell_register_command_handler( "recvf", dmell_handler_recvf );
     dmell_register_command_handler( "help", dmell_handler_help );
     dmell_register_command_handler( "set", dmell_handler_set );
     dmell_register_command_handler( "unset", dmell_handler_unset );

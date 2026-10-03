@@ -16,3 +16,7 @@ _codeql_detected_source_root
 *.tmp
 *.swp
 *~
+
+# Python tools and integration tests
+__pycache__/
+*.pyc

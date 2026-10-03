@@ -21,9 +21,12 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DDMOD_MODE=DMOD_MODULE
+          cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
           cmake --build .
       
+      - name: Test binary TTY transfers with real modules
+        run: DMELL_TEST_DMF="$PWD/build/dmf" python3 tests/tty_transfer/test_transfer.py
+
       - name: Build and run unit tests
         run: |
           mkdir -p build-tests
