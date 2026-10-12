@@ -274,7 +274,20 @@ typedef struct
     uint32_t    files;
     uint32_t    bytes;
     char        failed[MAX_PATH];   /* What could not be written, "" */
+    uint32_t    skipped;            /* Files received but not written: they did not open (in use) */
+    char        skipped_names[MAX_PATH];
 } summary_t;
+
+/* A file that does not open is received all the same - the batch goes on - and named at the end */
+static void skipped(summary_t* sum, const char* name)
+{
+    size_t n = strlen(sum->skipped_names);
+    if (n + strlen(name) + 3U < sizeof(sum->skipped_names))
+        Dmod_SnPrintf(sum->skipped_names + n, sizeof(sum->skipped_names) - n, "%s%s", (n > 0) ? ", " : "", name);
+    else if (n >= 3U && n + 6U < sizeof(sum->skipped_names) && strcmp(sum->skipped_names + n - 3U, "...") != 0)
+        Dmod_SnPrintf(sum->skipped_names + n, sizeof(sum->skipped_names) - n, ", ...");
+    sum->skipped++;
+}
 
 /* The files of a batch, until the empty name */
 static int receive(link_t* link, const char* dir, uint8_t* data, summary_t* sum)
@@ -332,11 +345,7 @@ static int receive(link_t* link, const char* dir, uint8_t* data, summary_t* sum)
             }
         }
         if (file == NULL)
-        {
-            Dmod_SnPrintf(sum->failed, sizeof(sum->failed), "%s", name);
-            cancel();
-            return -EACCES;
-        }
+            skipped(sum, name);             /* (played, shown: received and left out) */
         put(ACK);
         put(CRC);
 
@@ -349,7 +358,8 @@ static int receive(link_t* link, const char* dir, uint8_t* data, summary_t* sum)
             r = receive_packet(link, data, &size, &block);
             if (r == PACKET_CAN)
             {
-                Dmod_FileClose(file);
+                if (file != NULL)
+                    Dmod_FileClose(file);
                 return -ECANCELED;
             }
             if (r == PACKET_EOT)
@@ -367,7 +377,8 @@ static int receive(link_t* link, const char* dir, uint8_t* data, summary_t* sum)
             {
                 if (++errors > MAX_ERRORS)
                 {
-                    Dmod_FileClose(file);
+                    if (file != NULL)
+                        Dmod_FileClose(file);
                     cancel();
                     return -EIO;
                 }
@@ -381,7 +392,7 @@ static int receive(link_t* link, const char* dir, uint8_t* data, summary_t* sum)
                 uint32_t n = (uint32_t)size;
                 if (length > 0 && written + n > length)
                     n = length - written;        /* Its padding (0x1A) left out */
-                if (n > 0 && Dmod_FileWrite(data, 1, n, file) != n)
+                if (n > 0 && file != NULL && Dmod_FileWrite(data, 1, n, file) != n)
                 {
                     Dmod_FileClose(file);
                     Dmod_SnPrintf(sum->failed, sizeof(sum->failed), "%s", path);
@@ -393,9 +404,12 @@ static int receive(link_t* link, const char* dir, uint8_t* data, summary_t* sum)
             }
             put(ACK);                       /* (a block repeated: our ACK lost - acknowledged again) */
         }
-        Dmod_FileClose(file);
-        sum->files++;
-        sum->bytes += written;
+        if (file != NULL)
+        {
+            Dmod_FileClose(file);
+            sum->files++;
+            sum->bytes += written;
+        }
         put(CRC);                           /* The next file's header */
     }
 }
@@ -464,7 +478,10 @@ int main(int argc, char** argv)
     Dmod_Stdin_SetFlags(flags);
     Dmod_Free(data);
 
-    if (status == 0)
+    if (status == 0 && sum.skipped > 0)
+        Dmod_Printf("\nymodem: %u file(s), %u bytes; %u not written (in use?): %s\n", (unsigned)sum.files,
+                    (unsigned)sum.bytes, (unsigned)sum.skipped, sum.skipped_names);
+    else if (status == 0)
         Dmod_Printf("\nymodem: %u file(s), %u bytes\n", (unsigned)sum.files, (unsigned)sum.bytes);
     else if (status == -ECANCELED)
         Dmod_Printf("\nymodem: cancelled (%u file(s) received)\n", (unsigned)sum.files);
