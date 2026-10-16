@@ -8,7 +8,7 @@ dmell is a shell interpreter designed for the DMOD (Dynamic Module) system. It p
 ## Features
 
 - **Built-in Commands**: Basic shell commands like `echo`, `write`, `read`, `help`, `cd`, `pwd`, `set`, `unset`, `export`, and `exit`
-- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`, `rm`, `rmdir`, `find`, `which`, `printf`, `mount`, `umount`, `ymodem`) available as separate DMOD modules
+- **External Command Modules**: Complex commands (`cp`, `mv`, `ls`, `tree`, `cat`, `mkdir`, `touch`, `head`, `tail`, `grep`, `rm`, `rmdir`, `find`, `which`, `printf`, `mount`, `umount`, `ymodem`) available as separate DMOD modules
 - **Script Execution**: Support for `.dme` script files
 - **Variable Management**: Environment variables and shell variables support
 - **Shebang Support**: Execute scripts with custom interpreters
@@ -71,6 +71,7 @@ These modules can be installed separately using the `dmf-get` package manager to
 dmf-get cp
 dmf-get mv
 dmf-get ls
+dmf-get tree
 dmf-get cat
 dmf-get catini
 dmf-get mkdir
@@ -93,6 +94,7 @@ dmf-get ymodem
 | `cp`   | Copy files | [commands/cp/README.md](commands/cp/README.md) |
 | `mv`   | Move/rename files | [commands/mv/README.md](commands/mv/README.md) |
 | `ls`   | List directory contents | [commands/ls/README.md](commands/ls/README.md) |
+| `tree` | Show a directory tree | [commands/tree/README.md](commands/tree/README.md) |
 | `cat`  | Display file contents | [commands/cat/README.md](commands/cat/README.md) |
 | `catini`| Display INI files with syntax highlighting | [commands/catini/README.md](commands/catini/README.md) |
 | `mkdir`| Create directories | [commands/mkdir/README.md](commands/mkdir/README.md) |
@@ -163,6 +165,7 @@ dmell/
 │   ├── cp/              # Copy command module
 │   ├── mv/              # Move command module
 │   ├── ls/              # List command module
+│   ├── tree/            # Directory tree command module
 │   ├── cat/             # Cat command module
 │   ├── catini/          # INI file viewer with syntax highlighting module
 │   ├── mkdir/           # Create directory module
