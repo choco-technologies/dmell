@@ -21,3 +21,5 @@ endif()
 add_subdirectory(dmell_vars)
 add_subdirectory(dmell_cmd)
 add_subdirectory(dmell_line)
+
+add_subdirectory(reboot)
