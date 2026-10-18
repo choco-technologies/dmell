@@ -105,6 +105,7 @@ dmf-get ymodem
 | `rm`   | Remove files | [commands/rm/README.md](commands/rm/README.md) |
 | `rmdir`| Remove empty directories | [commands/rmdir/README.md](commands/rmdir/README.md) |
 | `find` | Search for files | [commands/find/README.md](commands/find/README.md) |
+| `reboot` | Immediately restart the system | [commands/reboot/README.md](commands/reboot/README.md) |
 | `which`| Locate module path | [commands/which/README.md](commands/which/README.md) |
 | `printf`| Format and print text | [commands/printf/README.md](commands/printf/README.md) |
 | `mount`| Mount a file system | [commands/mount/README.md](commands/mount/README.md) |
