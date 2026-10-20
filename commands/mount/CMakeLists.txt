@@ -6,8 +6,12 @@ cmake_minimum_required(VERSION 3.18)
 # Module name
 set(MOUNT_MODULE_NAME mount)
 
-# Stack size for the mount module
-set(DMOD_STACK_SIZE 1024)
+# Mount runs the filesystem loader, initialization and block-driver calls on
+# its own stack. 1 KiB overflows during a cold littlefs/QUADSPI mount on
+# Cortex-M7; reserve space for that call chain, not just argument parsing.
+# Keep the requirement within dmell's 4 KiB stack: synchronous shell commands
+# are checked against the caller's remaining stack before they are run.
+set(DMOD_STACK_SIZE 3072)
 
 # Create the module executable
 dmod_add_executable(${MOUNT_MODULE_NAME} ${DMOD_MODULE_VERSION}
