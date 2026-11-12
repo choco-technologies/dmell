@@ -564,6 +564,31 @@ static int run_shebang( char* interpreter, char* script_file, int argc, char** a
     return result;
 }
 
+/*
+ * The terminal's foreground reader (dmtty_ioctl_cmd_claim_foreground / dmtty_ioctl_cmd_release_foreground of dmtty_types.h, duplicated
+ * here like in dmlog rather than taking a build dependency on dmtty - only dmtty implements them): dmtty lets only one handle of a
+ * terminal read, the first that read it - the shell's. A child spawned in the foreground has a handle of its own, so the shell gives
+ * the terminal up before it starts the child (the child claims it with its first read) and takes it back when the child is gone. Without this the
+ * child waits for its turn forever and the shell for the child: a command that asks for something (a password) hangs the console.
+ */
+#define DMELL_TTY_IOCTL_CLAIM_FOREGROUND     0x1004
+#define DMELL_TTY_IOCTL_RELEASE_FOREGROUND   0x1008
+
+static void set_terminal_foreground( bool shell_reads )
+{
+    if( !Dmod_IsFunctionConnected( (void*)Dmod_LockStdio ) || !Dmod_IsFunctionConnected( (void*)Dmod_UnlockStdio ) )
+    {
+        return;
+    }
+    void* terminal = Dmod_LockStdio( DMOD_STDIN );
+    if( terminal == NULL )
+    {
+        return;     /* nothing bound to stdin: the console of the kernel, which has no foreground */
+    }
+    (void)Dmod_Ioctl( terminal, shell_reads ? DMELL_TTY_IOCTL_CLAIM_FOREGROUND : DMELL_TTY_IOCTL_RELEASE_FOREGROUND, NULL );
+    Dmod_UnlockStdio( DMOD_STDIN );
+}
+
 /**
  * @brief Helper function to spawn a module and wait for its completion.
  *
@@ -601,6 +626,8 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
         return result;
     }
 
+    /* (before the child exists: it must not be reading the terminal yet when the shell gives it up) */
+    set_terminal_foreground( false );
     int pid = Dmod_SpawnModule( file_name, argc, argv, streams.Count > 0 ? &streams : NULL );
 
     for( size_t i = 0; i < streams.Count; i++ )
@@ -610,18 +637,21 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
 
     if( pid < 0 )
     {
+        set_terminal_foreground( true );
         return pid;
     }
 
     dmosi_process_t proc = dmell_proc_find_by_id( (dmosi_process_id_t)pid );
     if( proc == NULL )
     {
+        set_terminal_foreground( true );
         return -ESRCH;
     }
 
     dmell_proc_wait( proc, -1 );
     int exit_status = dmell_proc_get_exit_status( proc );
     dmell_proc_destroy( proc );
+    set_terminal_foreground( true );     /* (after the child's handles are closed) */
     return exit_status;
 }
 
