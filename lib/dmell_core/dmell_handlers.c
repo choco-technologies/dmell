@@ -576,10 +576,6 @@ static int run_shebang( char* interpreter, char* script_file, int argc, char** a
 
 static void set_terminal_foreground( bool shell_reads )
 {
-    if( !Dmod_IsFunctionConnected( (void*)Dmod_LockStdio ) || !Dmod_IsFunctionConnected( (void*)Dmod_UnlockStdio ) )
-    {
-        return;
-    }
     void* terminal = Dmod_LockStdio( DMOD_STDIN );
     if( terminal == NULL )
     {
