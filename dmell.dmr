@@ -1,0 +1,41 @@
+# DMOD Resource File for dmell
+# This file specifies where resources should be installed
+#
+# The release package of dmell is one archive with the shell, its command modules and dmell_core (see .github/workflows/release.yml):
+# this file describes the shell, the module that is installed under the name dmell. The commands are installed under their own names.
+
+# === Core Module ===
+# Main module file - always installed
+dmf=./${module}.dmf => ${destination}/${module}.dmf [origin=${dmf_dir}/${module}.dmf]
+
+# Compressed module
+dmfc=./${module}.dmfc => ${destination}/${module}.dmfc [origin=${build_dir}/dmfc/${module}.dmfc]
+
+# Dependencies file (if exists)
+dmd=./${module}.dmd => ${destination}/${module}.dmd [origin=${dmf_dir}/${module}.dmd]
+
+# Version information
+version=./${module}_version.txt => ${destination}/${module}_version.txt [origin=${dmf_dir}/${module}_version.txt]
+
+# === Documentation ===
+# Module documentation in markdown format for dmf-man tool
+docs=./docs => ${destination}/${module}/docs [origin=${repo_dir}/docs]
+
+# README file
+readme=./README.md => ${destination}/${module}/README.md [origin=${repo_dir}/README.md]
+
+# === Icons ===
+# Built from icons/ (DMOD_ICON_PATH in CMakeLists.txt): the default icon and a small one, and the e-paper's own of both.
+# dmf-get installs them to the icons directory: <icons>/dmell.dmvi and <icons>/small/dmell.dmvi (the e-paper's in their place when
+# the screen epaper-240x320 is selected)
+icon=./icon.dmvi => ${icons_dir}/${module}.dmvi [origin=${icons_dir}/${module}.dmvi]
+icon=./icon-small.dmvi => ${icons_dir}/${module}.dmvi [variant=small] [origin=${icons_dir}/${module}.dmvi]
+icon=./icon-epaper-240x320.dmvi => ${icons_dir}/${module}.dmvi [screen=epaper-240x320] [origin=${icons_dir}/epaper-240x320/${module}.dmvi]
+icon=./icon-small-epaper-240x320.dmvi => ${icons_dir}/${module}.dmvi [variant=small] [screen=epaper-240x320] [origin=${icons_dir}/epaper-240x320/${module}.dmvi]
+
+# === License ===
+# License file
+license=./LICENSE => ${destination}/${module}/LICENSE [origin=${repo_dir}/LICENSE]
+
+# Adding itself
+dmr=./${module}.dmr => ${destination}/${module}/${module}.dmr [origin=${repo_dir}/${module}.dmr]

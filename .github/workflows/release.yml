@@ -99,6 +99,11 @@ jobs:
           if [ -f $DMF_DIR/dmell.dmd ]; then
             cp $DMF_DIR/dmell.dmd release_package/
           fi
+
+          # The resources of the shell and its icons (dmell.dmr says where dmf-get installs them): the build converted icons/ and
+          # packed them, with the resource file, into $BUILD_DIR/packages/dmell
+          cp dmell.dmr release_package/
+          cp $BUILD_DIR/packages/dmell/icon*.dmvi release_package/
           
           # Copy command modules - dynamically discover from commands directory
           for cmd_dir in commands/*/; do

@@ -110,10 +110,19 @@ if(NOT DMELL_BUILD_TESTS)
     #   and can be used in the same way after the creation
     #   (for example, to link libraries)
     #
+    # The resources of the package of the shell (dmell.dmr) and its icon (icons/: see the .dmr). They are the shell's only: the command
+    # modules below inherit the variables of this directory and are packaged with the archive of the release (release.yml), so they are
+    # unset right after the shell is created
+    set(DMOD_DMR_PATH           ${CMAKE_SOURCE_DIR}/dmell.dmr)
+    set(DMOD_ICON_PATH          ${CMAKE_SOURCE_DIR}/icons)
+
     dmod_add_executable(${DMOD_MODULE_NAME} ${DMOD_MODULE_VERSION}
         # List of source files - can include C and C++ files
         src/dmell.c
     )
+
+    unset(DMOD_DMR_PATH)
+    unset(DMOD_ICON_PATH)
 
     # dmell only ever talks to the dmell_core facade - everything else
     # (dmell_ia, dmell_script, dmell_handlers, ...) is dmell_core's own

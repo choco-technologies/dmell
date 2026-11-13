@@ -162,6 +162,8 @@ echo "myvar = $myvar"
 dmell/
 ├── src/                  # Main shell source files
 ├── include/              # Header files
+├── icons/                # The icon of the shell (SVG): the default one, and one for the 1-bit e-paper
+├── dmell.dmr             # What the package of the shell installs where (see Icon)
 ├── commands/             # Command modules
 │   ├── cp/              # Copy command module
 │   ├── mv/              # Move command module
@@ -185,6 +187,14 @@ dmell/
 ├── examples/            # Example scripts
 └── CMakeLists.txt       # Build configuration
 ```
+
+## Icon
+
+The shell has an icon for a launcher: `icons/icon.svg` (the prompt `>_` in a terminal window; the default one and a small one,
+`icons/icon.svg.ini`) and `icons/epaper-240x320/icon.svg` (the same in black and white for the 240x320 e-paper). The build converts them
+to `.dmvi` (`DMOD_ICON_PATH`) and `dmell.dmr` carries them in the package: `dmf-get dmell --icons-dir <dir>` installs `<dir>/dmell.dmvi`
+and `<dir>/small/dmell.dmvi`, and with `--screen epaper-240x320` the e-paper's in their place. It needs the DMOD tools with icons
+(`dmf-get`, `mkdmrpkg`).
 
 ## License
 
