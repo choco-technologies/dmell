@@ -11,7 +11,7 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     container:
-      image: chocotechnologies/dmod:1.0.4
+      image: chocotechnologies/dmod:1.1
     
     steps:
       - name: Checkout code

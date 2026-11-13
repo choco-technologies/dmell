@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- dmell: a terminal window with the prompt of a shell: ">_" -->
+  <defs>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2d3556"/>
+      <stop offset="1" stop-color="#11152b"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="url(#screen)"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="12.25" fill="none" stroke="#6571a3" stroke-width="1.5"/>
+  <polyline points="17,22 31,32 17,42" fill="none" stroke="#6ef2a8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="37" y1="45" x2="50" y2="45" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+</svg>
