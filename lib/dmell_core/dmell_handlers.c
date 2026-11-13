@@ -588,8 +588,8 @@ static void set_terminal_foreground( bool shell_reads )
 /**
  * @brief Helper function to spawn a module and wait for its completion.
  *
- * Falls back to Dmod_SpawnModule when Dmod_RunModule fails with -ENOMEM,
- * then waits for the spawned process to finish using the dmosi process API.
+ * Spawns the module with Dmod_SpawnModule, then waits for the spawned process
+ * to finish using the dmosi process API.
  *
  * By the time this runs, dmell_run_command_string() has already applied any
  * requested redirection to dmell's own process (see dmell_redirect.h). Rather
@@ -608,8 +608,8 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
 {
     if( !Dmod_IsFunctionConnected( (void*)Dmod_SpawnModule ) )
     {
-        DMOD_LOG_ERROR("Dmod_SpawnModule is not available and Dmod_RunModule failed with -ENOMEM\n");
-        return -ENOMEM;
+        DMOD_LOG_ERROR("Dmod_SpawnModule is not available\n");
+        return -ENOSYS;
     }
 
     Dmod_StreamRedirection_t entries[DMELL_STREAM_COUNT];
@@ -652,6 +652,33 @@ static int spawn_and_wait( const char* file_name, int argc, char** argv )
 }
 
 /**
+ * @brief Run a module as a command and wait for it.
+ *
+ * The command runs as a process of its own, whose standard streams are the shell's.
+ * That makes the process the unit the system can contain a failure of the command to:
+ * when it runs out of stack or crashes, the system reports it on the standard output the
+ * command was writing to and terminates that process alone, and spawn_and_wait() then
+ * returns its exit status here - the shell goes on with the next command. Run in the
+ * shell's own thread (Dmod_RunModule), the same crash would take the shell down with it.
+ *
+ * Dmod_RunModule is only used where the system has no processes to spawn.
+ *
+ * @param file_name Path or name of the module to run
+ * @param argc Number of arguments
+ * @param argv Array of argument strings
+ * @return int Exit code of the command, or negative error code on failure
+ */
+static int run_module_command( const char* file_name, int argc, char** argv )
+{
+    if( Dmod_IsFunctionConnected( (void*)Dmod_SpawnModule ) )
+    {
+        return spawn_and_wait( file_name, argc, argv );
+    }
+
+    return Dmod_RunModule( file_name, argc, argv );
+}
+
+/**
  * @brief Default handler for unknown commands.
  *
  * @param argc Number of arguments
@@ -675,7 +702,6 @@ static int dmell_handler_default( int argc, char** argv, dmell_ctx_t* ctx )
     {
         // check if it is a file execution
         char* file_name = argv[0];
-        int result;
         if(Dmod_FileAvailable(file_name))
         {
             char interpreter[256] = {0};
@@ -687,22 +713,9 @@ static int dmell_handler_default( int argc, char** argv, dmell_ctx_t* ctx )
             {
                 return dmell_run_script_file(ctx, file_name, argc, argv);
             }
-            else
-            {
-                result = Dmod_RunModule( file_name, argc, argv );
-            }
-        }
-        else
-        {
-            result = Dmod_RunModule( file_name, argc, argv );
         }
 
-        if( result == -ENOMEM )
-        {
-            result = spawn_and_wait( file_name, argc, argv );
-        }
-
-        return result;
+        return run_module_command( file_name, argc, argv );
     }
 }
 
