@@ -236,12 +236,6 @@ int dmell_redirect_apply_to_current_process( const dmell_redirect_t* redirects, 
         return 0;
     }
 
-    if( !Dmod_IsFunctionConnected( (void*)Dmod_SetStreamFilePath ) )
-    {
-        DMOD_LOG_ERROR("Stream redirection is not supported on this platform\n");
-        return -ENOSYS;
-    }
-
     Dmod_StreamRedirection_t new_entries[DMELL_STREAM_COUNT];
     size_t new_count = 0;
     int result = dmell_redirect_resolve( redirects, count, new_entries, &new_count );
@@ -284,11 +278,6 @@ int dmell_redirect_snapshot_current_process( Dmod_StreamRedirection_t* out_entri
         return -EINVAL;
     }
     *out_count = 0;
-
-    if( !Dmod_IsFunctionConnected( (void*)Dmod_GetStreamRedirections ) )
-    {
-        return 0;
-    }
 
     return Dmod_GetStreamRedirections( Dmod_GetCurrentPid(), out_entries, DMELL_STREAM_COUNT, out_count );
 }

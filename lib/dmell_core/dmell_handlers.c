@@ -588,8 +588,8 @@ static void set_terminal_foreground( bool shell_reads )
 /**
  * @brief Helper function to spawn a module and wait for its completion.
  *
- * Falls back to Dmod_SpawnModule when Dmod_RunModule fails with -ENOMEM,
- * then waits for the spawned process to finish using the dmosi process API.
+ * Spawns the module with Dmod_SpawnModule, then waits for the spawned process
+ * to finish using the dmosi process API.
  *
  * By the time this runs, dmell_run_command_string() has already applied any
  * requested redirection to dmell's own process (see dmell_redirect.h). Rather
@@ -606,12 +606,6 @@ static void set_terminal_foreground( bool shell_reads )
  */
 static int spawn_and_wait( const char* file_name, int argc, char** argv )
 {
-    if( !Dmod_IsFunctionConnected( (void*)Dmod_SpawnModule ) )
-    {
-        DMOD_LOG_ERROR("Dmod_SpawnModule is not available and Dmod_RunModule failed with -ENOMEM\n");
-        return -ENOMEM;
-    }
-
     Dmod_StreamRedirection_t entries[DMELL_STREAM_COUNT];
     Dmod_StreamRedirections_t streams = { .Entries = entries, .Count = 0 };
 
@@ -675,7 +669,6 @@ static int dmell_handler_default( int argc, char** argv, dmell_ctx_t* ctx )
     {
         // check if it is a file execution
         char* file_name = argv[0];
-        int result;
         if(Dmod_FileAvailable(file_name))
         {
             char interpreter[256] = {0};
@@ -687,22 +680,9 @@ static int dmell_handler_default( int argc, char** argv, dmell_ctx_t* ctx )
             {
                 return dmell_run_script_file(ctx, file_name, argc, argv);
             }
-            else
-            {
-                result = Dmod_RunModule( file_name, argc, argv );
-            }
-        }
-        else
-        {
-            result = Dmod_RunModule( file_name, argc, argv );
         }
 
-        if( result == -ENOMEM )
-        {
-            result = spawn_and_wait( file_name, argc, argv );
-        }
-
-        return result;
+        return spawn_and_wait( file_name, argc, argv );
     }
 }
 

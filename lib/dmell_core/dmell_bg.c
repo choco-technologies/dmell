@@ -76,12 +76,6 @@ int dmell_run_background( dmell_ctx_t* ctx, const char* cmd, size_t len )
         return -EINVAL;
     }
 
-    if( !Dmod_IsFunctionConnected( (void*)Dmod_SpawnModule ) )
-    {
-        DMOD_LOG_ERROR("Background execution ('&') requires process spawning support, which is not available\n");
-        return -ENOSYS;
-    }
-
     dmell_argv_t parsed_argv = {0};
     int result = dmell_parse_command( cmd, len, &parsed_argv );
     if( result < 0 )
