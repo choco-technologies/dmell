@@ -365,7 +365,7 @@ DMOD_TEST_STEP(run_empty_command_string)
  * This test binary links only the weak DMOD process API (no dmosi backend
  * provides a real Dmod_SetStreamFilePath), so requesting a redirect must fail
  * cleanly instead of silently running the command unredirected - see
- * dmell_redirect_apply_to_current_process()'s Dmod_IsFunctionConnected check.
+ * the error of the weak Dmod_SetStreamFilePath.
  */
 DMOD_TEST_STEP(run_string_with_redirect_fails_without_stream_backend)
 {
