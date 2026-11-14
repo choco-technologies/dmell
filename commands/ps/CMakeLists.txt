@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.18)
 set(PS_MODULE_NAME ps)
 
 # Stack size for the ps module
-set(DMOD_STACK_SIZE 2048)
+set(DMOD_STACK_SIZE 3072)
 
 # Create the module executable
 dmod_add_executable(${PS_MODULE_NAME} ${DMOD_MODULE_VERSION}

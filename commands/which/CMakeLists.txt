@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.18)
 set(WHICH_MODULE_NAME which)
 
 # Stack size for the which module (larger due to 512-byte stack-allocated path buffer)
-set(DMOD_STACK_SIZE 1024)
+set(DMOD_STACK_SIZE 3072)
 
 # Create the module executable
 dmod_add_executable(${WHICH_MODULE_NAME} ${DMOD_MODULE_VERSION}
